@@ -2,7 +2,10 @@ export type CategoryId = "general" | "tech" | "entertainment" | "community" | "f
 
 export type PlatformId =
   | "weibo" | "zhihu" | "baidu" | "ithome" | "hupu" | "bilibili"
-  | "xiaohongshu" | "douyin" | "36kr" | "xueqiu" | "github" | "juejin";
+  | "xiaohongshu" | "douyin" | "36kr" | "xueqiu" | "github" | "juejin"
+  | "cctv" | "zaobao" | "chinadaily" | "tieba" | "sspai" | "jiqizhixin" | "huxiu" | "agirls"
+  | "douban-media" | "hongguo" | "gamersky" | "douban-community" | "tonghuashun" | "eastmoney"
+  | "wallstreetcn" | "huggingface" | "52pojie" | "infoq";
 
 export interface Board {
   id: string;
@@ -12,14 +15,18 @@ export interface Board {
 export interface Platform {
   id: PlatformId;
   name: string;
-  boards: readonly [Board, ...Board[]];
   sourceUrl: (title: string) => string;
+}
+
+export interface CategoryPlatform {
+  id: PlatformId;
+  boards: readonly [Board, ...Board[]];
 }
 
 export interface Category {
   id: CategoryId;
   name: string;
-  platforms: readonly [PlatformId, ...PlatformId[]];
+  platforms: readonly [CategoryPlatform, ...CategoryPlatform[]];
 }
 
 export type TrendReadingBlock =
@@ -44,6 +51,9 @@ export interface Trend {
 export interface BoardResult {
   items: Trend[];
   mode: "mock" | "live";
+  status?: "fresh" | "stale";
+  updatedAt?: string;
+  sourceTitle?: string;
 }
 
 export interface BoardQuery {

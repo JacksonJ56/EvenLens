@@ -2,33 +2,42 @@ import { AlertCircle, ChartNoAxesColumnIncreasing, Inbox, Maximize2, MessageSqua
 import { motion } from "motion/react";
 import { useBoard } from "@/hooks/use-board";
 import { platforms } from "@/lib/catalog";
-import type { BoardQuery, Trend } from "@/types/trending";
+import type { Board, BoardQuery, Trend } from "@/types/trending";
 import { PlatformIcon } from "./platform-icon";
 import type { TrendPreviewSelection } from "./trend-preview";
 
+const timeFormat = new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "short" });
 const labels = { hot: "热", new: "新", rising: "上升" };
 
-export function Ranking({ query, onBoard, onAnalyze, onPreview, previewId }: {
+export function Ranking({ query, boards, onBoard, onAnalyze, onPreview, previewId }: {
   query: BoardQuery;
+  boards: readonly Board[];
   onBoard: (board: string) => void;
   onAnalyze: (trend: Trend) => void;
   onPreview: (selection: TrendPreviewSelection) => void;
   previewId?: string;
 }) {
   const platform = platforms[query.platform];
-  const { state, reload } = useBoard(query);
+  const { state, refreshing, reload } = useBoard(query);
 
   return (
     <section className="ranking" aria-label={`${platform.name}榜单`}>
       <div className="ranking-header">
         <div className="ranking-identity"><PlatformIcon id={platform.id} /><h2>{platform.name}</h2></div>
         <div className="board-tabs" aria-label="榜单类型">
-          {platform.boards.map(({ id, label }) => (
+          {boards.map(({ id, label }) => (
             <button type="button" key={id} aria-pressed={query.board === id} onClick={() => onBoard(id)}>{label}</button>
           ))}
         </div>
-        <button type="button" className="icon-button refresh" aria-label="刷新榜单" title="刷新榜单" onClick={reload}><RefreshCw size={16} /></button>
+        <button type="button" className="icon-button refresh" aria-label="刷新榜单" title="刷新榜单" disabled={refreshing || state.status === "unavailable"} onClick={reload}><RefreshCw size={16} /></button>
       </div>
+      {state.status === "ready" && state.result.mode === "live" && (
+        <div className="ranking-status" data-stale={state.result.status === "stale"} role="status">
+          <span>{refreshing ? "正在刷新" : state.result.status === "stale" ? "刷新失败，显示上次成功数据" : "已更新"}</span>
+          {state.result.updatedAt && <time dateTime={state.result.updatedAt}>{timeFormat.format(new Date(state.result.updatedAt))}</time>}
+          {state.result.sourceTitle && <span className="ranking-status-source" title={state.result.sourceTitle}>{state.result.sourceTitle}</span>}
+        </div>
+      )}
       <div className="ranking-columns row-grid" aria-hidden="true">
         <span>排名</span><span>热点话题</span><span className="source-cell">来源</span><span className="metric-cell"><ChartNoAxesColumnIncreasing size={13} />指标</span><span />
       </div>
@@ -41,6 +50,9 @@ export function Ranking({ query, onBoard, onAnalyze, onPreview, previewId }: {
               </div>
             ))}
           </div>
+        )}
+        {state.status === "unavailable" && (
+          <div className="board-feedback" role="status"><Inbox size={26} /><strong>该榜单尚未接入</strong><p>可以切换到其他平台或榜单。</p></div>
         )}
         {state.status === "error" && (
           <div className="board-feedback" role="alert"><AlertCircle size={25} /><strong>榜单加载失败</strong><button type="button" className="outline-button" onClick={reload}>重新加载</button></div>

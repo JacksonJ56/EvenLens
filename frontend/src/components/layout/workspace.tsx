@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight, FlaskConical, LayoutGrid, Menu, MessageSquare, MoveUpRight } from "lucide-react";
+import { ChevronRight, Database, FlaskConical, LayoutGrid, Menu, MessageSquare, MoveUpRight } from "lucide-react";
 import { MotionConfig, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/agent/chat-panel";
@@ -9,15 +9,20 @@ import { type LensId, lensItems, Navigation } from "@/components/sidebar/navigat
 import { PlatformPicker } from "@/components/trending/platform-picker";
 import { Ranking } from "@/components/trending/ranking";
 import { TrendPreview, type TrendPreviewSelection } from "@/components/trending/trend-preview";
+import { trendingMode } from "@/lib/api/trending";
 import { useAgent } from "@/hooks/use-agent";
-import { categories, platforms } from "@/lib/catalog";
-import type { BoardQuery, CategoryId, PlatformId, Trend } from "@/types/trending";
+import { categories } from "@/lib/catalog";
+import type { BoardQuery, CategoryId, CategoryPlatform, PlatformId, Trend } from "@/types/trending";
 
 const initialCategory = categories[0];
 
+function defaultBoard(platform: CategoryPlatform): BoardQuery {
+  return { platform: platform.id, board: platform.boards[0].id };
+}
+
 export function Workspace() {
   const [categoryId, setCategoryId] = useState<CategoryId>(initialCategory.id);
-  const [query, setQuery] = useState<BoardQuery>({ platform: initialCategory.platforms[0], board: platforms[initialCategory.platforms[0]].boards[0].id });
+  const [query, setQuery] = useState<BoardQuery>(() => defaultBoard(initialCategory.platforms[0]));
   const [lensId, setLensId] = useState<LensId>();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
@@ -35,6 +40,7 @@ export function Workspace() {
   const composer = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const category = categories.find(({ id }) => id === categoryId) ?? initialCategory;
+  const activePlatform = category.platforms.find(({ id }) => id === query.platform) ?? category.platforms[0];
   const lens = lensItems.find(({ id }) => id === lensId);
   const overlayOpen = chatOverlay && agent.open;
 
@@ -69,7 +75,11 @@ export function Workspace() {
   }, []);
 
   function selectPlatform(platform: PlatformId) {
-    setQuery({ platform, board: platforms[platform].boards[0].id });
+    const selected = category.platforms.find(({ id }) => id === platform);
+    if (selected) {
+      setPreview(undefined);
+      setQuery(defaultBoard(selected));
+    }
   }
 
   function selectCategory(id: CategoryId) {
@@ -79,7 +89,7 @@ export function Workspace() {
     if (id !== categoryId) {
       setPreview(undefined);
       setCategoryId(id);
-      selectPlatform(next.platforms[0]);
+      setQuery(defaultBoard(next.platforms[0]));
       setExpanded(false);
     }
     if (mobileNav) closeNav();
@@ -147,7 +157,7 @@ export function Workspace() {
                 <LayoutGrid size={16} className="workspace-icon" aria-hidden="true" /><span>{lens ? "事件透镜" : "热点工作台"}</span><ChevronRight size={14} aria-hidden="true" /><strong>{lens?.name ?? category.name}</strong>
               </div>
               <div className="topbar-actions">
-                <span className="demo-label"><FlaskConical size={13} aria-hidden="true" />演示数据</span>
+                <span className="demo-label">{trendingMode === "mock" ? <><FlaskConical size={13} aria-hidden="true" />演示数据</> : <><Database size={13} aria-hidden="true" />真实数据</>}</span>
                 <button type="button" ref={chatTrigger} className="assistant-toggle" aria-expanded={agent.open} aria-controls="agent-panel" onClick={() => agent.open ? closeChat() : openChat()}><MessageSquare size={14} aria-hidden="true" />对话</button>
               </div>
             </header>
@@ -160,10 +170,10 @@ export function Workspace() {
                     <div key={category.id} className="page-intro">
                       <h1>{category.id === "general" ? "全网热点" : `${category.name}热点`}</h1>
                     </div>
-                    <PlatformPicker ids={category.platforms} current={query.platform} expanded={expanded}
+                    <PlatformPicker ids={category.platforms.map(({ id }) => id)} current={query.platform} expanded={expanded}
                       onExpand={() => setExpanded((value) => !value)}
                       onSelect={(id) => { if (id !== query.platform) selectPlatform(id); }} />
-                    <Ranking query={query} onBoard={(board) => setQuery({ ...query, board })} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
+                    <Ranking query={query} boards={activePlatform.boards} onBoard={(board) => { setPreview(undefined); setQuery({ ...query, board }); }} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
                   </>
                 )}
               </div>

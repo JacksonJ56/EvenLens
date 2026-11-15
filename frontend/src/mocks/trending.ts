@@ -35,7 +35,7 @@ const samples: Record<string, readonly Sample[]> = {
     ["人们怎样形成对一座陌生城市的印象？", "84万"],
     ["你会如何安排一整天的离线生活？", "58万"],
   ],
-  "zhihu/tech": [
+  "zhihu/tech-top-answers": [
     ["端侧模型的性能应该如何衡量？", "128万"],
     ["开源项目如何管理向后兼容？", "96万"],
     ["为什么电纸书刷新时会出现残影？", "61万"],
@@ -63,14 +63,19 @@ const samples: Record<string, readonly Sample[]> = {
     ["第一次参加城市路跑应该注意什么", "119"],
     ["你最喜欢的球馆观赛视角", "82"],
   ],
-  "bilibili/hot": [
+  "bilibili/popular": [
     ["在家搭一座小型气象站", "76.1万", "rising"],
     ["一分钟看完老相机的机械结构", "63.2万", "hot"],
     ["把城市夜景画进速写本", "43.9万"],
     ["用三种材料复刻童年手工玩具", "31.7万"],
     ["在城市屋顶观察一整晚的星空", "26.8万"],
   ],
-  "xiaohongshu/hot": [
+  "bilibili/hot-search": [
+    ["一分钟看完老相机的机械结构"],
+    ["在城市屋顶观察一整晚的星空"],
+    ["在家搭一座小型气象站"],
+  ],
+  "xiaohongshu/likes-3d": [
     ["秋天的公园散步路线", undefined, "new"],
     ["周末书店地图", undefined, "hot"],
     ["一周便当如何提前准备", undefined, "rising"],
@@ -90,7 +95,7 @@ const samples: Record<string, readonly Sample[]> = {
     ["户外品牌开始关注城市通勤市场"],
     ["线下展览如何找到稳定的复购场景"],
   ],
-  "xueqiu/hot": [
+  "xueqiu/topics": [
     ["如何读懂企业现金流量表", "129", "hot"],
     ["跟踪行业景气度需要看哪些指标", "92"],
     ["不同分红频率会怎样影响长期收益", "65"],
@@ -120,6 +125,13 @@ const samples: Record<string, readonly Sample[]> = {
   ],
 };
 
+const sampleAliases: Record<string, string> = {
+  "ithome/latest": "ithome/hot",
+  "bilibili/tech": "bilibili/popular",
+  "xiaohongshu/reads-3d": "xiaohongshu/likes-3d",
+  "hupu/gambia": "hupu/hot",
+};
+
 const metricLabels: Partial<Record<BoardQuery["platform"], string>> = {
   weibo: "热度", zhihu: "热度", baidu: "热度", ithome: "评论", hupu: "回复",
   bilibili: "播放", douyin: "热度", xueqiu: "讨论", github: "Stars", juejin: "点赞",
@@ -127,8 +139,7 @@ const metricLabels: Partial<Record<BoardQuery["platform"], string>> = {
 
 export function mockBoard({ platform, board }: BoardQuery): Trend[] {
   const key = `${platform}/${board}`;
-  const entries = samples[key];
-  if (!entries) throw new Error("找不到该榜单");
+  const entries = samples[sampleAliases[key] ?? key] ?? [];
   return entries.map(([title, value, status, url], index) => ({
     id: `${key}/${index + 1}`,
     title,
