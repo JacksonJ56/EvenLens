@@ -1,0 +1,129 @@
+{
+  "weibo/hot": {
+    "sources": [
+      {"route": "/weibo/search/hot"},
+      {"url": "https://weibo.com/ajax/side/hotSearch", "adapter": "weibo", "title": "微博热搜", "metric_label": "热度"},
+      {"url": "https://rebang.today/?tab=weibo", "adapter": "rebang", "title": "微博热搜 · 今日热榜"}
+    ]
+  },
+  "xiaohongshu/reads-3d": {"sources": [{"url": "https://rebang.today/?tab=xiaohongshu", "adapter": "rebang", "title": "小红书 · 阅读榜（近 3 天） · 今日热榜"}], "refresh_seconds": 900},
+  "xiaohongshu/likes-3d": {"sources": [{"url": "https://rebang.today/?tab=xiaohongshu&sub_tab=like-3d", "adapter": "rebang", "title": "小红书 · 点赞榜（近 3 天） · 今日热榜"}], "refresh_seconds": 900},
+  "xiaohongshu/collections-3d": {"sources": [{"url": "https://rebang.today/?tab=xiaohongshu&sub_tab=collect-3d", "adapter": "rebang", "title": "小红书 · 收藏榜（近 3 天） · 今日热榜"}], "refresh_seconds": 900},
+  "douyin/hot": {
+    "sources": [
+      {"url": "https://www.douyin.com/aweme/v1/web/hot/search/list/?device_platform=webapp&aid=6383&channel=channel_pc_web&detail_list=1", "adapter": "douyin", "title": "抖音热点榜", "metric_label": "热度"},
+      {"url": "https://rebang.today/?tab=douyin", "adapter": "rebang", "title": "抖音热点榜 · 今日热榜"}
+    ]
+  },
+  "zhihu/hot": {"route": "/zhihu/hot"},
+  "baidu/hot": {"route": "/baidu/top"},
+  "cctv/news": {"route": "/cctv/news", "title": "央视网 · 新闻滚动"},
+  "zaobao/singapore": {
+    "sources": [
+      {"route": "/zaobao/realtime/singapore"},
+      {"url": "https://www.zaobao.com.sg/realtime/singapore", "adapter": "links", "title": "联合早报 · 本土最新", "link_path": "/news/singapore/story\\d{8}-\\d+"}
+    ]
+  },
+  "zaobao/world": {
+    "sources": [
+      {"route": "/zaobao/realtime/world"},
+      {"url": "https://www.zaobao.com.sg/realtime/world", "adapter": "links", "title": "联合早报 · 国际最新", "link_path": "/news/world/story\\d{8}-\\d+"}
+    ]
+  },
+  "chinadaily/home-news": {"url": "https://www.chinadaily.com.cn/", "adapter": "links", "title": "China Daily · Home News", "link_path": "/a/\\d{6}/\\d{2}/WS[\\da-fA-F]+\\.html", "link_heading": "h4"},
+  "tieba/hot": {"sources": [{"url": "https://rebang.today/?tab=baidu-tieba", "adapter": "rebang", "title": "百度贴吧 · 热榜 · 今日热榜"}], "refresh_seconds": 900},
+  "ithome/latest": {
+    "sources": [
+      {"url": "https://it.ithome.com/", "adapter": "links", "title": "IT之家 · IT资讯最新", "link_path": "/\\d/\\d{3}/\\d{3}\\.htm", "link_host": "www.ithome.com", "link_class": "title", "link_heading": "h2", "skip_heading_class": "t"},
+      {"url": "https://rebang.today/tech?tab=ithome&sub_tab=latest", "adapter": "rebang", "title": "IT之家 · 最新 · 今日热榜"}
+    ]
+  },
+  "ithome/industry": {"url": "https://it.ithome.com/ityejie", "adapter": "links", "title": "IT之家 · 业界", "link_path": "/\\d/\\d{3}/\\d{3}\\.htm", "link_host": "www.ithome.com", "link_class": "title", "link_heading": "h2", "skip_heading_class": "t"},
+  "ithome/network": {"url": "https://it.ithome.com/internet", "adapter": "links", "title": "IT之家 · 网络", "link_path": "/\\d/\\d{3}/\\d{3}\\.htm", "link_host": "www.ithome.com", "link_class": "title", "link_heading": "h2", "skip_heading_class": "t"},
+  "bilibili/tech": {
+    "sources": [
+      {"route": "/bilibili/ranking/tech", "title": "哔哩哔哩 · 科技数码"},
+      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1012&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 科技数码（官方接口）"}
+    ]
+  },
+  "sspai/hottest": {"sources": [{"url": "https://rebang.today/?tab=sspai&sub_tab=hottest", "adapter": "rebang", "title": "少数派 · 最热 · 今日热榜"}], "refresh_seconds": 900},
+  "jiqizhixin/latest": {"sources": [{"url": "https://rebang.today/tech?tab=jiqizhixin", "adapter": "rebang", "title": "机器之心 · 文章库最新 · 今日热榜"}], "refresh_seconds": 900},
+  "huxiu/hot": {"sources": [{"url": "https://rebang.today/?tab=huxiu", "adapter": "rebang", "title": "虎嗅 · 热文 · 今日热榜"}], "refresh_seconds": 900},
+  "huxiu/latest": {"sources": [{"url": "https://rebang.today/?tab=huxiu&sub_tab=latest", "adapter": "rebang", "title": "虎嗅 · 最新 · 今日热榜"}], "refresh_seconds": 900},
+  "agirls/latest": {
+    "sources": [
+      {"url": "https://agirls.aotter.net/", "adapter": "links", "title": "電獺少女 · 最新文章", "link_path": "/post/\\d+", "link_class": "ag-post-item__link"},
+      {"url": "https://rebang.today/tech?tab=agirls", "adapter": "rebang", "title": "電獺少女 · 最新文章 · 今日热榜"}
+    ]
+  },
+  "36kr/hot": {
+    "sources": [
+      {"route": "/36kr/hot-list"},
+      {"url": "https://rebang.today/tech?tab=36kr", "adapter": "rebang", "title": "36氪 · 热榜 · 今日热榜"}
+    ]
+  },
+  "36kr/latest": {"sources": [{"url": "https://rebang.today/tech?tab=36kr&sub_tab=latest", "adapter": "rebang", "title": "36氪 · 最新 · 今日热榜"}], "refresh_seconds": 900},
+  "weibo/entertainment": {"refresh_seconds": 900, "sources": [{"url": "https://rebang.today/?tab=weibo&sub_tab=ent", "adapter": "rebang", "title": "微博文娱 · 今日热榜"}]},
+  "bilibili/entertainment": {
+    "sources": [
+      {"route": "/bilibili/ranking/ent", "title": "哔哩哔哩 · 娱乐"},
+      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1002&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 娱乐（官方接口）"}
+    ]
+  },
+  "douban-media/movie": {"sources": [{"url": "https://rebang.today/?tab=douban-media", "adapter": "rebang", "title": "豆瓣书影音 · 电影 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-media/tv": {"sources": [{"url": "https://rebang.today/?tab=douban-media&sub_tab=tv", "adapter": "rebang", "title": "豆瓣书影音 · 电视 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-media/book": {"sources": [{"url": "https://rebang.today/?tab=douban-media&sub_tab=book", "adapter": "rebang", "title": "豆瓣书影音 · 读书 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-media/music": {"sources": [{"url": "https://rebang.today/?tab=douban-media&sub_tab=music", "adapter": "rebang", "title": "豆瓣书影音 · 音乐 · 今日热榜"}], "refresh_seconds": 900},
+  "hongguo/hot": {"sources": [{"url": "https://rebang.today/ent?tab=hongguo", "adapter": "rebang", "title": "红果短剧 · 热播榜 · 今日热榜"}], "refresh_seconds": 900},
+  "hongguo/live-action": {"sources": [{"url": "https://rebang.today/ent?tab=hongguo&sub_tab=hot-real-drama", "adapter": "rebang", "title": "红果短剧 · 真人剧 · 今日热榜"}], "refresh_seconds": 900},
+  "hongguo/ai": {"sources": [{"url": "https://rebang.today/ent?tab=hongguo&sub_tab=hot-ai-drama", "adapter": "rebang", "title": "红果短剧 · AI剧 · 今日热榜"}], "refresh_seconds": 900},
+  "hongguo/animation": {"sources": [{"url": "https://rebang.today/ent?tab=hongguo&sub_tab=hot-comic-drama", "adapter": "rebang", "title": "红果短剧 · 漫剧 · 今日热榜"}], "refresh_seconds": 900},
+  "gamersky/recommend": {"sources": [{"url": "https://rebang.today/?tab=gamersky", "adapter": "rebang", "title": "游民星空 · 今日推荐 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-community/discussion": {"sources": [{"url": "https://rebang.today/?tab=douban-community", "adapter": "rebang", "title": "豆瓣社区 · 精选讨论 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-community/topic": {"sources": [{"url": "https://rebang.today/?tab=douban-community&sub_tab=topic", "adapter": "rebang", "title": "豆瓣社区 · 热门话题 · 今日热榜"}], "refresh_seconds": 900},
+  "douban-community/group": {"sources": [{"url": "https://rebang.today/?tab=douban-community&sub_tab=group", "adapter": "rebang", "title": "豆瓣社区 · 发现小组 · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/gambia": {"sources": [{"url": "https://rebang.today/?tab=hupu", "adapter": "rebang", "title": "虎扑 · 步行街 · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/nba": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-nba", "adapter": "rebang", "title": "虎扑 · NBA · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/games": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-gg", "adapter": "rebang", "title": "虎扑 · 游戏 · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/digital": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-digital", "adapter": "rebang", "title": "虎扑 · 数码 · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/entertainment": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-ent", "adapter": "rebang", "title": "虎扑 · 影视娱乐 · 今日热榜"}], "refresh_seconds": 900},
+  "hupu/soccer": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-soccer", "adapter": "rebang", "title": "虎扑 · 国际足球 · 今日热榜"}], "refresh_seconds": 900},
+  "tonghuashun/headlines": {"sources": [{"url": "https://rebang.today/fin?tab=tonghuashun", "adapter": "rebang", "title": "同花顺 · 头条 · 今日热榜"}], "refresh_seconds": 900},
+  "eastmoney/latest": {"url": "https://finance.eastmoney.com/yaowen.html", "adapter": "links", "title": "东方财富 · 财经要闻", "link_path": "/a/\\d{12,}\\.html", "link_heading": "p"},
+  "wallstreetcn/hot": {"route": "/wallstreetcn/hot", "title": "华尔街见闻 · 当日最热"},
+  "wallstreetcn/latest": {
+    "sources": [
+      {"route": "/wallstreetcn/news"},
+      {"url": "https://rebang.today/fin?tab=wallstreetcn&sub_tab=latest", "adapter": "rebang", "title": "华尔街见闻 · 最新 · 今日热榜"}
+    ]
+  },
+  "github/hot": {"url": "https://github.com/trending", "adapter": "github", "title": "GitHub Trending · 今日"},
+  "huggingface/blog": {
+    "sources": [
+      {"url": "https://huggingface.co/blog/feed.xml", "adapter": "rss", "title": "Hugging Face · 技术文章"},
+      {"url": "https://rebang.today/dev?tab=huggingface", "adapter": "rebang", "title": "Hugging Face · 技术文章 · 今日热榜"}
+    ]
+  },
+  "huggingface/community": {"sources": [{"url": "https://rebang.today/dev?tab=huggingface&sub_tab=community", "adapter": "rebang", "title": "Hugging Face · 社区热文 · 今日热榜"}], "refresh_seconds": 900},
+  "huggingface/models": {
+    "sources": [
+      {"url": "https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit=20", "adapter": "hf-models", "title": "Hugging Face · 热门模型", "metric_label": "点赞"},
+      {"url": "https://rebang.today/dev?tab=huggingface&sub_tab=models", "adapter": "rebang", "title": "Hugging Face · 热门模型 · 今日热榜"}
+    ]
+  },
+  "52pojie/today": {"sources": [{"url": "https://rebang.today/?tab=52pojie", "adapter": "rebang", "title": "吾爱破解 · 今日 · 今日热榜"}], "refresh_seconds": 900},
+  "52pojie/weekly": {"sources": [{"url": "https://rebang.today/?tab=52pojie&sub_tab=thisweek", "adapter": "rebang", "title": "吾爱破解 · 本周 · 今日热榜"}], "refresh_seconds": 900},
+  "52pojie/monthly": {"sources": [{"url": "https://rebang.today/?tab=52pojie&sub_tab=thismonth", "adapter": "rebang", "title": "吾爱破解 · 本月 · 今日热榜"}], "refresh_seconds": 900},
+  "infoq/7d": {"sources": [{"url": "https://rebang.today/dev?tab=infoq", "adapter": "rebang", "title": "InfoQ · 7天 · 今日热榜"}], "refresh_seconds": 900},
+  "infoq/1m": {"sources": [{"url": "https://rebang.today/dev?tab=infoq&sub_tab=month", "adapter": "rebang", "title": "InfoQ · 1个月 · 今日热榜"}], "refresh_seconds": 900},
+  "infoq/6m": {"sources": [{"url": "https://rebang.today/dev?tab=infoq&sub_tab=year", "adapter": "rebang", "title": "InfoQ · 6个月 · 今日热榜"}], "refresh_seconds": 900},
+  "zhihu/tech-top-answers": {"route": "/zhihu/topic/19556664/top-answers", "title": "知乎 · 科技话题精华"},
+  "ithome/hot": {"route": "/ithome/ranking/24h"},
+  "hupu/hot": {"route": "/hupu/all/topic-daily"},
+  "bilibili/popular": {"url": "https://api.bilibili.com/x/web-interface/popular?ps=50&pn=1", "adapter": "bilibili", "title": "哔哩哔哩 · 综合热门"},
+  "bilibili/hot-search": {"route": "/bilibili/hot-search"},
+  "xueqiu/topics": {"refresh_seconds": 900, "sources": [{"url": "https://rebang.today/?tab=xueqiu", "adapter": "rebang", "title": "雪球话题榜 · 今日热榜"}]},
+  "github/typescript": {"url": "https://github.com/trending/typescript", "adapter": "github", "title": "GitHub Trending · TypeScript · 今日"},
+  "juejin/hot": {"route": "/juejin/trending/all/weekly"},
+  "juejin/frontend": {"route": "/juejin/trending/frontend/weekly"}
+}

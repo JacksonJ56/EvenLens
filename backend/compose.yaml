@@ -1,0 +1,8 @@
+services:
+  rsshub:
+    image: ${RSSHUB_IMAGE:-diygod/rsshub:chromium-bundled}
+    ports:
+      - "127.0.0.1:1200:1200"
+    environment:
+      NODE_ENV: production
+      CACHE_EXPIRE: 300
