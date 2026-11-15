@@ -1,16 +1,19 @@
-import { AlertCircle, ArrowUpRight, ChartNoAxesColumnIncreasing, Inbox, MessageSquarePlus, RefreshCw } from "lucide-react";
+import { AlertCircle, ChartNoAxesColumnIncreasing, Inbox, Maximize2, MessageSquarePlus, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
 import { useBoard } from "@/hooks/use-board";
 import { platforms } from "@/lib/catalog";
 import type { BoardQuery, Trend } from "@/types/trending";
 import { PlatformIcon } from "./platform-icon";
+import type { TrendPreviewSelection } from "./trend-preview";
 
 const labels = { hot: "热", new: "新", rising: "上升" };
 
-export function Ranking({ query, onBoard, onAnalyze }: {
+export function Ranking({ query, onBoard, onAnalyze, onPreview, previewId }: {
   query: BoardQuery;
   onBoard: (board: string) => void;
   onAnalyze: (trend: Trend) => void;
+  onPreview: (selection: TrendPreviewSelection) => void;
+  previewId?: string;
 }) {
   const platform = platforms[query.platform];
   const { state, reload } = useBoard(query);
@@ -45,10 +48,14 @@ export function Ranking({ query, onBoard, onAnalyze }: {
         {state.status === "ready" && (state.result.items.length ? (
           <motion.ol className="ranking-list" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.2 }}>
             {state.result.items.map((trend) => (
-              <li className="ranking-row row-grid" key={trend.id}>
+              <li className="ranking-row row-grid" key={trend.id} data-preview-source={trend.id === previewId}>
                 <span className="rank-number" data-rank={trend.rank}>{String(trend.rank).padStart(2, "0")}</span>
                 <div className="trend-topic">
-                  <a href={trend.url} target="_blank" rel="noopener noreferrer">{trend.title}<ArrowUpRight size={14} className="trend-external" aria-hidden="true" /></a>
+                  <button type="button" className="trend-preview-trigger" aria-haspopup="dialog" onClick={(event) => {
+                    const trigger = event.currentTarget;
+                    const row = trigger.closest("li");
+                    if (row) onPreview({ trend, row, trigger });
+                  }}>{trend.title}<Maximize2 size={12} className="trend-preview-icon" aria-hidden="true" /></button>
                   {trend.status && <span className="trend-label" data-status={trend.status}>{labels[trend.status]}</span>}
                 </div>
                 <span className="source-cell">{platform.name}</span>

@@ -8,6 +8,7 @@ import { Composer } from "@/components/agent/composer";
 import { type LensId, lensItems, Navigation } from "@/components/sidebar/navigation";
 import { PlatformPicker } from "@/components/trending/platform-picker";
 import { Ranking } from "@/components/trending/ranking";
+import { TrendPreview, type TrendPreviewSelection } from "@/components/trending/trend-preview";
 import { useAgent } from "@/hooks/use-agent";
 import { categories, platforms } from "@/lib/catalog";
 import type { BoardQuery, CategoryId, PlatformId, Trend } from "@/types/trending";
@@ -21,6 +22,8 @@ export function Workspace() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [preview, setPreview] = useState<TrendPreviewSelection>();
+  const previewReturnFocus = useRef<HTMLButtonElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [chatOverlay, setChatOverlay] = useState(false);
   const agent = useAgent(query);
@@ -74,6 +77,7 @@ export function Workspace() {
     if (!next) return;
     setLensId(undefined);
     if (id !== categoryId) {
+      setPreview(undefined);
       setCategoryId(id);
       selectPlatform(next.platforms[0]);
       setExpanded(false);
@@ -106,6 +110,17 @@ export function Workspace() {
     input.current?.focus({ preventScroll: true });
   }
 
+  function closePreview() {
+    previewReturnFocus.current = preview?.trigger ?? null;
+    setPreview(undefined);
+  }
+
+  useLayoutEffect(() => {
+    if (preview) return;
+    previewReturnFocus.current?.focus({ preventScroll: true });
+    previewReturnFocus.current = null;
+  }, [preview]);
+
   return (
     <MotionConfig reducedMotion="user">
       <div className="workspace" data-nav-collapsed={collapsed} onKeyDown={(event) => {
@@ -114,7 +129,7 @@ export function Workspace() {
         else if (agent.open) closeChat();
       }}>
         <Navigation blocked={overlayOpen} category={categoryId} lens={lensId} collapsed={collapsed} mobileOpen={mobileNav} closeRef={navClose}
-          onCategory={selectCategory} onLens={(id) => { setLensId(id); if (mobileNav) closeNav(); }}
+          onCategory={selectCategory} onLens={(id) => { setPreview(undefined); setLensId(id); if (mobileNav) closeNav(); }}
           onToggle={() => setCollapsed((value) => !value)} onClose={closeNav} />
         <motion.div
           ref={stage}
@@ -136,7 +151,7 @@ export function Workspace() {
                 <button type="button" ref={chatTrigger} className="assistant-toggle" aria-expanded={agent.open} aria-controls="agent-panel" onClick={() => agent.open ? closeChat() : openChat()}><MessageSquare size={14} aria-hidden="true" />对话</button>
               </div>
             </header>
-            <main className="main-scroll">
+            <main className="main-scroll" data-preview-open={Boolean(preview)} inert={Boolean(preview)}>
               <div className="main-inner">
                 {lens ? (
                   <section className="lens-placeholder"><lens.icon size={28} /><h1>{lens.name}</h1><p>这个模块预留给后续事件分析功能。</p><button type="button" className="outline-button" onClick={() => setLensId(undefined)}>返回热点榜单 <MoveUpRight size={14} /></button></section>
@@ -148,11 +163,12 @@ export function Workspace() {
                     <PlatformPicker ids={category.platforms} current={query.platform} expanded={expanded}
                       onExpand={() => setExpanded((value) => !value)}
                       onSelect={(id) => { if (id !== query.platform) selectPlatform(id); }} />
-                    <Ranking query={query} onBoard={(board) => setQuery({ ...query, board })} onAnalyze={analyze} />
+                    <Ranking query={query} onBoard={(board) => setQuery({ ...query, board })} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
                   </>
                 )}
               </div>
             </main>
+            {preview && <TrendPreview selection={preview} onClose={closePreview} />}
           </div>
           <button type="button" className="chat-scrim" tabIndex={-1} aria-label="关闭 AI 侧栏" aria-hidden={!agent.open} onClick={closeChat} />
           <ChatPanel open={agent.open} messages={agent.messages} closeRef={chatClose} onClose={closeChat} />

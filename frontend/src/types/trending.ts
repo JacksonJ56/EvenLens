@@ -22,6 +22,10 @@ export interface Category {
   platforms: readonly [PlatformId, ...PlatformId[]];
 }
 
+export type TrendReadingBlock =
+  | { type: "paragraph"; text: string }
+  | { type: "image"; src: string; alt: string; caption?: string };
+
 export interface Trend {
   id: string;
   title: string;
@@ -30,6 +34,11 @@ export interface Trend {
   platform: PlatformId;
   metric?: { value: string; label: string };
   status?: "hot" | "new" | "rising";
+  preview?: {
+    themeColor?: string;
+    summary?: string;
+    blocks?: TrendReadingBlock[];
+  };
 }
 
 export interface BoardResult {
