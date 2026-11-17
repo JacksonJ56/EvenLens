@@ -1,6 +1,6 @@
 import { AlertCircle, ChartNoAxesColumnIncreasing, Inbox, Maximize2, MessageSquarePlus, RefreshCw } from "lucide-react";
 import { motion } from "motion/react";
-import { useBoard } from "@/hooks/use-board";
+import type { BoardView } from "@/hooks/use-board";
 import { platforms } from "@/lib/catalog";
 import type { Board, BoardQuery, Trend } from "@/types/trending";
 import { PlatformIcon } from "./platform-icon";
@@ -9,16 +9,17 @@ import type { TrendPreviewSelection } from "./trend-preview";
 const timeFormat = new Intl.DateTimeFormat("zh-CN", { dateStyle: "short", timeStyle: "short" });
 const labels = { hot: "热", new: "新", rising: "上升" };
 
-export function Ranking({ query, boards, onBoard, onAnalyze, onPreview, previewId }: {
+export function Ranking({ query, boards, data, onBoard, onAnalyze, onPreview, previewId }: {
   query: BoardQuery;
   boards: readonly Board[];
+  data: BoardView;
   onBoard: (board: string) => void;
   onAnalyze: (trend: Trend) => void;
   onPreview: (selection: TrendPreviewSelection) => void;
   previewId?: string;
 }) {
   const platform = platforms[query.platform];
-  const { state, refreshing, reload } = useBoard(query);
+  const { state, refreshing, reload } = data;
 
   return (
     <section className="ranking" aria-label={`${platform.name}榜单`}>

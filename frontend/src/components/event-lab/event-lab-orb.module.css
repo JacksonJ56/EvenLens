@@ -1,0 +1,68 @@
+.orb {
+  --orb-size: 18px;
+  position: relative;
+  display: inline-block;
+  flex: 0 0 var(--orb-size);
+  width: var(--orb-size);
+  height: var(--orb-size);
+  overflow: hidden;
+  isolation: isolate;
+  border-radius: 50%;
+  background: #201b40;
+  vertical-align: middle;
+  transition: box-shadow 620ms ease;
+}
+
+.orb[data-size="panel"] { --orb-size: 30px; }
+
+/* Layered color and drifting light inspired by SmoothUI’s Siri Orb. */
+.orb::before,
+.orb::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.orb::before {
+  inset: -32%;
+  background:
+    radial-gradient(ellipse at 26% 32%, #7bdbff 3%, transparent 42%),
+    radial-gradient(ellipse at 72% 30%, #ff8cdb 4%, transparent 43%),
+    radial-gradient(ellipse at 33% 75%, #727cff 8%, transparent 46%),
+    conic-gradient(from 24deg, #472c8d, #d069bb, #764dda, #3d83c2, #472c8d);
+  filter: blur(1px) saturate(.74);
+  opacity: .75;
+  transform: rotate(-32deg) scale(1.06);
+  transition: transform 720ms cubic-bezier(.2, .75, .26, 1), filter 420ms ease, opacity 420ms ease;
+}
+
+.orb::after {
+  inset: 0;
+  border-radius: inherit;
+  background:
+    radial-gradient(circle at 35% 28%, #fff8 0%, transparent 46%),
+    radial-gradient(ellipse at 50% 105%, #120a3094, transparent 63%);
+  box-shadow: inset 0 0 0 1px #d6caff42;
+}
+
+.orb[data-active="true"] { box-shadow: 0 0 12px #aa89ff50; }
+.orb[data-active="true"]::before {
+  filter: blur(1px) saturate(1.25);
+  opacity: 1;
+  transform: rotate(187deg) scale(1.22);
+}
+
+.orb[data-size="panel"][data-active="true"]::before {
+  animation: arrive 720ms cubic-bezier(.2, .75, .26, 1);
+}
+
+@keyframes arrive {
+  from { opacity: .75; transform: rotate(-32deg) scale(1.06); }
+  to { opacity: 1; transform: rotate(187deg) scale(1.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .orb::before,
+  .orb[data-active="true"]::before { transform: rotate(18deg) scale(1.12); }
+  .orb[data-size="panel"][data-active="true"]::before { animation: none; }
+}

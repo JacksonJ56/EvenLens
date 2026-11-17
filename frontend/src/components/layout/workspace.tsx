@@ -1,17 +1,21 @@
 "use client";
 
-import { ChevronRight, Database, FlaskConical, LayoutGrid, Menu, MessageSquare, MoveUpRight } from "lucide-react";
+import { ChevronRight, Database, FlaskConical, LayoutGrid, Menu, MessageSquare } from "lucide-react";
 import { MotionConfig, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/agent/chat-panel";
 import { Composer } from "@/components/agent/composer";
-import { type LensId, lensItems, Navigation } from "@/components/sidebar/navigation";
+import { EventLabPanel } from "@/components/event-lab/event-lab-panel";
+import { Navigation } from "@/components/sidebar/navigation";
 import { PlatformPicker } from "@/components/trending/platform-picker";
 import { Ranking } from "@/components/trending/ranking";
 import { TrendPreview, type TrendPreviewSelection } from "@/components/trending/trend-preview";
 import { trendingMode } from "@/lib/api/trending";
 import { useAgent } from "@/hooks/use-agent";
+import { useBoard } from "@/hooks/use-board";
 import { categories } from "@/lib/catalog";
+import { resolveEventLabSource } from "@/lib/event-lab";
+import type { EventLabSelection } from "@/types/event-lab";
 import type { BoardQuery, CategoryId, CategoryPlatform, PlatformId, Trend } from "@/types/trending";
 
 const initialCategory = categories[0];
@@ -23,7 +27,8 @@ function defaultBoard(platform: CategoryPlatform): BoardQuery {
 export function Workspace() {
   const [categoryId, setCategoryId] = useState<CategoryId>(initialCategory.id);
   const [query, setQuery] = useState<BoardQuery>(() => defaultBoard(initialCategory.platforms[0]));
-  const [lensId, setLensId] = useState<LensId>();
+  const [labOpen, setLabOpen] = useState(false);
+  const [labSelection, setLabSelection] = useState<EventLabSelection>();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -37,11 +42,14 @@ export function Workspace() {
   const chatClose = useRef<HTMLButtonElement>(null);
   const navTrigger = useRef<HTMLButtonElement>(null);
   const navClose = useRef<HTMLButtonElement>(null);
+  const boardHeading = useRef<HTMLHeadingElement>(null);
   const composer = useRef<HTMLDivElement>(null);
   const stage = useRef<HTMLDivElement>(null);
   const category = categories.find(({ id }) => id === categoryId) ?? initialCategory;
   const activePlatform = category.platforms.find(({ id }) => id === query.platform) ?? category.platforms[0];
-  const lens = lensItems.find(({ id }) => id === lensId);
+  const labSource = labSelection ? resolveEventLabSource(labSelection) : undefined;
+  const labQuery = trendingMode === "live" ? labSource?.query : undefined;
+  const boardData = useBoard(labOpen ? labQuery : query);
   const overlayOpen = chatOverlay && agent.open;
 
   useEffect(() => {
@@ -85,7 +93,7 @@ export function Workspace() {
   function selectCategory(id: CategoryId) {
     const next = categories.find((item) => item.id === id);
     if (!next) return;
-    setLensId(undefined);
+    setLabOpen(false);
     if (id !== categoryId) {
       setPreview(undefined);
       setCategoryId(id);
@@ -93,6 +101,18 @@ export function Workspace() {
       setExpanded(false);
     }
     if (mobileNav) closeNav();
+  }
+
+  function toggleLab() {
+    setPreview(undefined);
+    if (!labOpen) setLabSelection((selection) => selection ?? { categoryId, platformId: query.platform, boardId: query.board });
+    setLabOpen((open) => !open);
+    if (mobileNav) closeNav();
+  }
+
+  function returnToBoards() {
+    setLabOpen(false);
+    requestAnimationFrame(() => boardHeading.current?.focus({ preventScroll: true }));
   }
 
   function closeChat() {
@@ -138,8 +158,8 @@ export function Workspace() {
         if (mobileNav) closeNav();
         else if (agent.open) closeChat();
       }}>
-        <Navigation blocked={overlayOpen} category={categoryId} lens={lensId} collapsed={collapsed} mobileOpen={mobileNav} closeRef={navClose}
-          onCategory={selectCategory} onLens={(id) => { setPreview(undefined); setLensId(id); if (mobileNav) closeNav(); }}
+        <Navigation blocked={overlayOpen} category={categoryId} labOpen={labOpen} collapsed={collapsed} mobileOpen={mobileNav} closeRef={navClose}
+          onCategory={selectCategory} onLabToggle={toggleLab}
           onToggle={() => setCollapsed((value) => !value)} onClose={closeNav} />
         <motion.div
           ref={stage}
@@ -154,27 +174,29 @@ export function Workspace() {
             <header className="topbar">
               <div className="breadcrumbs">
                 <button type="button" ref={navTrigger} className="icon-button mobile-nav-toggle" aria-label="打开导航" aria-expanded={mobileNav} aria-controls="workspace-nav" onClick={openNav}><Menu size={20} /></button>
-                <LayoutGrid size={16} className="workspace-icon" aria-hidden="true" /><span>{lens ? "事件透镜" : "热点工作台"}</span><ChevronRight size={14} aria-hidden="true" /><strong>{lens?.name ?? category.name}</strong>
+                <LayoutGrid size={16} className="workspace-icon" aria-hidden="true" /><span>{labOpen ? "工作台" : "热点工作台"}</span><ChevronRight size={14} aria-hidden="true" /><strong>{labOpen ? "事件实验室" : category.name}</strong>
               </div>
               <div className="topbar-actions">
-                <span className="demo-label">{trendingMode === "mock" ? <><FlaskConical size={13} aria-hidden="true" />演示数据</> : <><Database size={13} aria-hidden="true" />真实数据</>}</span>
+                {!labOpen && <span className="demo-label">{trendingMode === "mock" ? <><FlaskConical size={13} aria-hidden="true" />演示数据</> : <><Database size={13} aria-hidden="true" />真实数据</>}</span>}
                 <button type="button" ref={chatTrigger} className="assistant-toggle" aria-expanded={agent.open} aria-controls="agent-panel" onClick={() => agent.open ? closeChat() : openChat()}><MessageSquare size={14} aria-hidden="true" />对话</button>
               </div>
             </header>
-            <main className="main-scroll" data-preview-open={Boolean(preview)} inert={Boolean(preview)}>
+            <main className="main-scroll" hidden={labOpen} data-preview-open={Boolean(preview)} inert={Boolean(preview)}>
               <div className="main-inner">
-                {lens ? (
-                  <section className="lens-placeholder"><lens.icon size={28} /><h1>{lens.name}</h1><p>这个模块预留给后续事件分析功能。</p><button type="button" className="outline-button" onClick={() => setLensId(undefined)}>返回热点榜单 <MoveUpRight size={14} /></button></section>
-                ) : (
-                  <>
-                    <div key={category.id} className="page-intro">
-                      <h1>{category.id === "general" ? "全网热点" : `${category.name}热点`}</h1>
-                    </div>
-                    <PlatformPicker ids={category.platforms.map(({ id }) => id)} current={query.platform} expanded={expanded}
-                      onExpand={() => setExpanded((value) => !value)}
-                      onSelect={(id) => { if (id !== query.platform) selectPlatform(id); }} />
-                    <Ranking query={query} boards={activePlatform.boards} onBoard={(board) => { setPreview(undefined); setQuery({ ...query, board }); }} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
-                  </>
+                <div key={category.id} className="page-intro">
+                  <h1 ref={boardHeading} tabIndex={-1}>{category.id === "general" ? "全网热点" : `${category.name}热点`}</h1>
+                </div>
+                <PlatformPicker ids={category.platforms.map(({ id }) => id)} current={query.platform} expanded={expanded}
+                  onExpand={() => setExpanded((value) => !value)}
+                  onSelect={(id) => { if (id !== query.platform) selectPlatform(id); }} />
+                <Ranking query={query} boards={activePlatform.boards} data={boardData.forQuery(query)} onBoard={(board) => { setPreview(undefined); setQuery({ ...query, board }); }} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
+              </div>
+            </main>
+            <main id="event-lab-panel" className="main-scroll" hidden={!labOpen}>
+              <div className="main-inner">
+                {labSelection && labSource && (
+                  <EventLabPanel active={labOpen} selection={labSelection} source={labSource}
+                    data={labQuery ? boardData.forQuery(labQuery) : undefined} onChange={setLabSelection} onReturn={returnToBoards} />
                 )}
               </div>
             </main>

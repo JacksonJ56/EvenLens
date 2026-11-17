@@ -1,32 +1,26 @@
-import { AudioLines, CircleDollarSign, Clapperboard, CodeXml, Crosshair, Globe2, LayoutGrid, Network, PanelLeftClose, PanelLeftOpen, Users, X } from "lucide-react";
+import { CircleDollarSign, Clapperboard, CodeXml, Crosshair, LayoutGrid, PanelLeftClose, PanelLeftOpen, Users, X } from "lucide-react";
 import type { Ref } from "react";
 import { categories } from "@/lib/catalog";
 import type { CategoryId } from "@/types/trending";
 import { BrandMark } from "@/components/ui/brand";
+import { EventLabNavItem } from "./event-lab-nav-item";
 
 const categoryIcons = { general: LayoutGrid, tech: Crosshair, entertainment: Clapperboard, community: Users, finance: CircleDollarSign, dev: CodeXml };
-export const lensItems = [
-  { id: "lens-1", name: "事件透镜 01", icon: Globe2 },
-  { id: "lens-2", name: "事件透镜 02", icon: Network },
-  { id: "lens-3", name: "事件透镜 03", icon: AudioLines },
-] as const;
-
-export type LensId = (typeof lensItems)[number]["id"];
 
 interface NavigationProps {
   category: CategoryId;
-  lens?: LensId;
+  labOpen: boolean;
   collapsed: boolean;
   blocked: boolean;
   mobileOpen: boolean;
   closeRef: Ref<HTMLButtonElement>;
   onCategory: (id: CategoryId) => void;
-  onLens: (id: LensId) => void;
+  onLabToggle: () => void;
   onToggle: () => void;
   onClose: () => void;
 }
 
-export function Navigation({ category, lens, collapsed, blocked, mobileOpen, closeRef, onCategory, onLens, onToggle, onClose }: NavigationProps) {
+export function Navigation({ category, labOpen, collapsed, blocked, mobileOpen, closeRef, onCategory, onLabToggle, onToggle, onClose }: NavigationProps) {
   const Collapse = collapsed ? PanelLeftOpen : PanelLeftClose;
   return (
     <>
@@ -47,19 +41,14 @@ export function Navigation({ category, lens, collapsed, blocked, mobileOpen, clo
             {categories.map(({ id, name }) => {
               const Icon = categoryIcons[id];
               return (
-                <button type="button" key={id} className="nav-item" aria-label={name} aria-current={!lens && category === id ? "page" : undefined} onClick={() => onCategory(id)}>
+                <button type="button" key={id} className="nav-item" aria-label={name} aria-current={!labOpen && category === id ? "page" : undefined} onClick={() => onCategory(id)}>
                   <Icon size={18} aria-hidden="true" /><span className="nav-label">{name}</span><span className="nav-tooltip" aria-hidden="true">{name}</span>
                 </button>
               );
             })}
           </div>
           <div className="nav-group">
-            <p className="nav-label nav-group-title">事件透镜</p>
-            {lensItems.map(({ id, name, icon: Icon }) => (
-              <button type="button" key={id} className="nav-item" aria-label={name} aria-current={lens === id ? "page" : undefined} onClick={() => onLens(id)}>
-                <Icon size={18} aria-hidden="true" /><span className="nav-label">{name}</span><span className="nav-tooltip" aria-hidden="true">{name}</span>
-              </button>
-            ))}
+            <EventLabNavItem active={labOpen} onToggle={onLabToggle} />
           </div>
         </nav>
       </aside>

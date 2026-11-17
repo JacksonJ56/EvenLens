@@ -1,0 +1,22 @@
+.wash {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transform: scaleX(.88);
+  transform-origin: 16px center;
+  background:
+    radial-gradient(ellipse at 8% 60%, #63cfff2e, transparent 62%),
+    radial-gradient(ellipse at 45% 10%, #9479ff34, transparent 76%),
+    radial-gradient(ellipse at 92% 78%, #ec81d528, transparent 70%);
+  transition: opacity 360ms ease, transform 620ms cubic-bezier(.2, .75, .26, 1);
+}
+
+.item:is(:hover, :focus-visible) .wash { opacity: .45; }
+.item[aria-current="page"] .wash { opacity: 1; transform: scaleX(1); }
+.label { position: relative; }
+
+@media (prefers-reduced-motion: reduce) {
+  .wash { transform: none; }
+}
