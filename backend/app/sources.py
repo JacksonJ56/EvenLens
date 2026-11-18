@@ -35,6 +35,78 @@ def field(row: dict, key: str) -> str:
     return value.strip() if isinstance(value, str) else str(value) if type(value) is int else ""
 
 
+def source_rows(payload: object, *keys: str) -> list[dict]:
+    for key in keys:
+        payload = payload.get(key) if isinstance(payload, dict) else None
+    if not isinstance(payload, list) or any(not isinstance(row, dict) for row in payload):
+        raise ValueError("Board response did not contain the expected list")
+    return payload
+
+
+def original_url(value: str, domain: str) -> str:
+    parts = urlsplit(value)
+    host = parts.hostname or ""
+    if (parts.scheme == "https" and (host == domain or host.endswith("." + domain))
+            and parts.username is None and parts.password is None and parts.port in {None, 443}):
+        return value
+    return ""
+
+
+def zhihu_entries(raw: bytes) -> list[Entry]:
+    entries = []
+    for row in source_rows(json.loads(raw), "data"):
+        target = row.get("target")
+        if not isinstance(target, dict):
+            entries.append(Entry("", ""))
+            continue
+        question = field(target, "id")
+        url = f"https://www.zhihu.com/question/{question}" if re.fullmatch(r"[0-9]+", question) else ""
+        detail = field(row, "detail_text")
+        heat = detail.removesuffix("热度").strip() if detail.endswith("热度") else ""
+        entries.append(Entry(field(target, "title"), url, summary(field(target, "excerpt")), heat))
+    return entries
+
+
+def baidu_entries(raw: bytes) -> list[Entry]:
+    match = re.search(r"<!--\s*s-data:(.*?)-->", raw.decode("utf-8"), re.DOTALL)
+    if not match:
+        raise ValueError("Baidu board data is missing")
+    payload = json.loads(match.group(1))
+    cards = source_rows(payload, "data", "cards")
+    board = next((card for card in cards if card.get("component") == "hotList" and card.get("text") == "热搜榜"), None)
+    rows = source_rows(board, "content")
+    return [
+        Entry(field(row, "word"), original_url(field(row, "url"), "baidu.com"),
+              summary(field(row, "desc")), field(row, "hotScore"))
+        for row in rows if not row.get("isTop")
+    ]
+
+
+def cctv_entries(raw: bytes) -> list[Entry]:
+    match = re.fullmatch(r"\s*news\((.*)\)\s*;?\s*", raw.decode("utf-8-sig"), re.DOTALL)
+    if not match:
+        raise ValueError("CCTV news response is not the expected JSONP")
+    return [
+        Entry(field(row, "title"), original_url(field(row, "url"), "cctv.com"), summary(field(row, "brief")))
+        for row in source_rows(json.loads(match.group(1)), "data", "list")
+    ]
+
+
+def wallstreetcn_day_entries(raw: bytes) -> list[Entry]:
+    payload = json.loads(raw)
+    if not isinstance(payload, dict) or field(payload, "code") != "20000":
+        raise ValueError("WallstreetCN did not return a successful ranking")
+    return [
+        Entry(field(row, "title"), original_url(field(row, "uri"), "wallstreetcn.com"), metric=field(row, "pageviews"))
+        for row in source_rows(payload, "data", "day_items")
+    ]
+
+
+PUBLIC_BOARD_PARSERS = {
+    "zhihu": zhihu_entries, "baidu": baidu_entries, "cctv": cctv_entries, "wallstreetcn-day": wallstreetcn_day_entries,
+}
+
+
 def platform_entries(raw: bytes, adapter: str) -> list[Entry]:
     payload = json.loads(raw)
     if not isinstance(payload, dict):
@@ -122,6 +194,34 @@ class RebangRanking(HTMLParser):
             self.entries.append(Entry(title, href))
 
 
+class AllnetBilibiliRanking(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.in_heading = False
+        self.heading = []
+        self.entries = []
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "h1":
+            self.in_heading = True
+        if tag != "a":
+            return
+        attrs = dict(attrs)
+        if "data-list-item" not in (attrs.get("class") or "").split():
+            return
+        url = original_url(attrs.get("href") or "", "bilibili.com")
+        if url and re.fullmatch(r"/video/BV[A-Za-z0-9]{10}/?", urlsplit(url).path):
+            self.entries.append(Entry((attrs.get("data-title") or "").strip(), url))
+
+    def handle_data(self, data):
+        if self.in_heading:
+            self.heading.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "h1":
+            self.in_heading = False
+
+
 class ArticleLinks(HTMLParser):
     def __init__(self, feed: Feed):
         super().__init__()
@@ -185,12 +285,19 @@ def parse_source(raw: bytes, platform: str, feed: Feed) -> ParsedFeed:
         parser = RebangRanking(feed.url or "", platform)
     elif feed.adapter == "links":
         parser = ArticleLinks(feed)
+    elif feed.adapter == "allnet-bilibili":
+        parser = AllnetBilibiliRanking()
     else:
-        entries = model_entries(raw) if feed.adapter == "hf-models" else platform_entries(raw, feed.adapter)
+        if parse := PUBLIC_BOARD_PARSERS.get(feed.adapter):
+            entries = parse(raw)
+        else:
+            entries = model_entries(raw) if feed.adapter == "hf-models" else platform_entries(raw, feed.adapter)
         return normalize(entries, platform, feed.title or "", feed.metric_label)
 
     parser.feed(raw.decode("utf-8"))
     parser.close()
-    if not parser.entries or isinstance(parser, RebangRanking) and not parser.selected:
+    wrong_tab = isinstance(parser, RebangRanking) and not parser.selected
+    wrong_heading = isinstance(parser, AllnetBilibiliRanking) and "".join(parser.heading).strip() != feed.page_heading
+    if not parser.entries or wrong_tab or wrong_heading:
         raise ValueError("Board page did not contain the expected ranking")
     return normalize(parser.entries, platform, feed.title or "", feed.metric_label)

@@ -1,4 +1,5 @@
 import asyncio
+import json
 import unittest
 
 import httpx
@@ -38,6 +39,65 @@ class FeedTests(unittest.TestCase):
 
 
 class DirectSourceTests(unittest.TestCase):
+    def test_zhihu_uses_original_question_url(self):
+        source = Feed(adapter="zhihu", title="知乎", metric_label="热度")
+        raw = json.dumps({"data": [
+            {"target": {"id": 123456, "title": "问题", "excerpt": "<p>原始摘要</p>"}, "detail_text": "12 万热度"},
+        ]}).encode()
+        item, = parse_source(raw, "zhihu", source).items
+        self.assertEqual(item["url"], "https://www.zhihu.com/question/123456")
+        self.assertEqual(item["preview"]["summary"], "原始摘要")
+        self.assertEqual(item["metric"], {"label": "热度", "value": "12 万"})
+
+    def test_baidu_reads_the_realtime_card_and_skips_pinned_items(self):
+        source = Feed(adapter="baidu", title="百度", metric_label="热度")
+        content = {"data": {"cards": [
+            {"component": "hotList", "text": "小说榜", "content": []},
+            {"component": "hotList", "text": "热搜榜", "content": [
+                {"word": "置顶", "url": "https://www.baidu.com/s?wd=pinned", "isTop": True},
+                {"word": "第一", "url": "https://www.baidu.com/s?wd=first", "hotScore": "100"},
+                {"word": "外链", "url": "https://example.com/s?wd=other"},
+                {"word": "第二", "url": "https://www.baidu.com/s?wd=second"},
+            ]},
+        ]}}
+        page = f"<!--s-data:{json.dumps(content, ensure_ascii=False)}-->".encode()
+        rows = parse_source(page, "baidu", source).items
+        self.assertEqual([(item["rank"], item["title"]) for item in rows], [(1, "第一"), (2, "第二")])
+        self.assertEqual(rows[0]["metric"]["value"], "100")
+        with self.assertRaises(ValueError):
+            parse_source(page.replace("热搜榜".encode(), "电影榜".encode()), "baidu", source)
+
+    def test_cctv_reads_expected_jsonp_wrapper(self):
+        source = Feed(adapter="cctv", title="央视网")
+        payload = json.dumps({"data": {"list": [
+            {"title": "滚动新闻", "url": "https://news.cctv.com/example.shtml", "brief": "新闻摘要"},
+        ]}}, ensure_ascii=False)
+        result = parse_source(f"news({payload});".encode(), "cctv", source)
+        self.assertEqual(result.items[0]["preview"]["summary"], "新闻摘要")
+        with self.assertRaises(ValueError):
+            parse_source(f"unexpected({payload});".encode(), "cctv", source)
+
+    def test_wallstreetcn_day_uses_only_day_items(self):
+        source = Feed(adapter="wallstreetcn-day", title="当日最热", metric_label="浏览量")
+        payload = {"code": 20000, "data": {
+            "day_items": [{"title": "今日文章", "uri": "https://wallstreetcn.com/articles/1", "pageviews": 500}],
+            "week_items": [{"title": "本周文章", "uri": "https://wallstreetcn.com/articles/2"}],
+        }}
+        item, = parse_source(json.dumps(payload).encode(), "wallstreetcn", source).items
+        self.assertEqual(item["title"], "今日文章")
+        self.assertEqual(item["metric"]["value"], "500")
+
+    def test_bilibili_fallback_checks_heading_and_preserves_original_videos(self):
+        source = Feed(adapter="allnet-bilibili", title="科技数码", page_heading="哔哩哔哩-数码科技")
+        html = """<h1>哔哩哔哩-数码科技</h1>
+        <a class="data-list-item" data-title="第一" href="https://www.bilibili.com/video/BV1BjWq68Ee2"></a>
+        <a class="data-list-item" data-title="站外" href="https://example.com/video/BV1BjWq68Ee2"></a>
+        <a class="data-list-item" data-title="第二" href="https://www.bilibili.com/video/BV1TLWi6GEfi"></a>"""
+        rows = parse_source(html.encode(), "bilibili", source).items
+        self.assertEqual([(item["rank"], item["title"]) for item in rows], [(1, "第一"), (2, "第二")])
+        with self.assertRaises(ValueError):
+            parse_source(html.replace("数码科技", "娱乐").encode(), "bilibili", source)
+
     def test_article_list_keeps_order_and_skips_pinned_and_offsite_links(self):
         config = Feed(url="https://it.example.com/", adapter="links", title="Latest",
                       link_path=r"/story/\d+", link_host="www.example.com", link_class="title",

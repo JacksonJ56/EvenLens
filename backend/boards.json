@@ -15,9 +15,24 @@
       {"url": "https://rebang.today/?tab=douyin", "adapter": "rebang", "title": "抖音热点榜 · 今日热榜"}
     ]
   },
-  "zhihu/hot": {"route": "/zhihu/hot"},
-  "baidu/hot": {"route": "/baidu/top"},
-  "cctv/news": {"route": "/cctv/news", "title": "央视网 · 新闻滚动"},
+  "zhihu/hot": {
+    "sources": [
+      {"route": "/zhihu/hot"},
+      {"url": "https://api.zhihu.com/topstory/hot-lists/total?limit=50&reverse_order=0", "adapter": "zhihu", "title": "知乎 · 热议（官方接口）", "metric_label": "热度"}
+    ]
+  },
+  "baidu/hot": {
+    "sources": [
+      {"route": "/baidu/top"},
+      {"url": "https://top.baidu.com/board?tab=realtime", "adapter": "baidu", "title": "百度 · 热搜（官方榜单）", "metric_label": "热度"}
+    ]
+  },
+  "cctv/news": {
+    "sources": [
+      {"route": "/cctv/news", "title": "央视网 · 新闻滚动"},
+      {"url": "https://news.cctv.com/2019/07/gaiban/cmsdatainterface/page/news_1.jsonp", "adapter": "cctv", "title": "央视网 · 新闻滚动（官方接口）"}
+    ]
+  },
   "zaobao/singapore": {
     "sources": [
       {"route": "/zaobao/realtime/singapore"},
@@ -43,7 +58,8 @@
   "bilibili/tech": {
     "sources": [
       {"route": "/bilibili/ranking/tech", "title": "哔哩哔哩 · 科技数码"},
-      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1012&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 科技数码（官方接口）"}
+      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1012&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 科技数码（官方接口）"},
+      {"url": "https://allnet.hot/detail/829", "adapter": "allnet-bilibili", "page_heading": "哔哩哔哩-数码科技", "title": "哔哩哔哩 · 科技数码 · 全网热点"}
     ]
   },
   "sspai/hottest": {"sources": [{"url": "https://rebang.today/?tab=sspai&sub_tab=hottest", "adapter": "rebang", "title": "少数派 · 最热 · 今日热榜"}], "refresh_seconds": 900},
@@ -67,7 +83,8 @@
   "bilibili/entertainment": {
     "sources": [
       {"route": "/bilibili/ranking/ent", "title": "哔哩哔哩 · 娱乐"},
-      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1002&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 娱乐（官方接口）"}
+      {"url": "https://api.bilibili.com/x/web-interface/ranking/v2?rid=1002&type=all", "adapter": "bilibili", "title": "哔哩哔哩 · 娱乐（官方接口）"},
+      {"url": "https://allnet.hot/detail/827", "adapter": "allnet-bilibili", "page_heading": "哔哩哔哩-娱乐", "title": "哔哩哔哩 · 娱乐 · 全网热点"}
     ]
   },
   "douban-media/movie": {"sources": [{"url": "https://rebang.today/?tab=douban-media", "adapter": "rebang", "title": "豆瓣书影音 · 电影 · 今日热榜"}], "refresh_seconds": 900},
@@ -90,7 +107,12 @@
   "hupu/soccer": {"sources": [{"url": "https://rebang.today/?tab=hupu&sub_tab=all-soccer", "adapter": "rebang", "title": "虎扑 · 国际足球 · 今日热榜"}], "refresh_seconds": 900},
   "tonghuashun/headlines": {"sources": [{"url": "https://rebang.today/fin?tab=tonghuashun", "adapter": "rebang", "title": "同花顺 · 头条 · 今日热榜"}], "refresh_seconds": 900},
   "eastmoney/latest": {"url": "https://finance.eastmoney.com/yaowen.html", "adapter": "links", "title": "东方财富 · 财经要闻", "link_path": "/a/\\d{12,}\\.html", "link_heading": "p"},
-  "wallstreetcn/hot": {"route": "/wallstreetcn/hot", "title": "华尔街见闻 · 当日最热"},
+  "wallstreetcn/hot": {
+    "sources": [
+      {"route": "/wallstreetcn/hot", "title": "华尔街见闻 · 当日最热"},
+      {"url": "https://api-one-wscn.awtmt.com/apiv1/content/articles/hot?period=all", "adapter": "wallstreetcn-day", "title": "华尔街见闻 · 当日最热（官方接口）", "metric_label": "浏览量"}
+    ]
+  },
   "wallstreetcn/latest": {
     "sources": [
       {"route": "/wallstreetcn/news"},

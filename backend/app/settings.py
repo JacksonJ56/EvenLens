@@ -24,6 +24,7 @@ class Feed:
     link_heading: str | None = None
     link_host: str | None = None
     skip_heading_class: str | None = None
+    page_heading: str | None = None
 
 
 @dataclass(frozen=True)
@@ -68,8 +69,13 @@ def load_settings() -> Settings:
         for feed in board.sources:
             if bool(feed.route) == bool(feed.url):
                 raise ValueError(f"{key}: specify exactly one of route and url")
-            if feed.adapter not in {"rss", "weibo", "bilibili", "douyin", "github", "rebang", "links", "hf-models"}:
+            if feed.adapter not in {
+                "rss", "weibo", "bilibili", "douyin", "github", "rebang", "links", "hf-models",
+                "zhihu", "baidu", "cctv", "wallstreetcn-day", "allnet-bilibili",
+            }:
                 raise ValueError(f"{key}: unsupported source adapter")
+            if feed.adapter == "allnet-bilibili" and not feed.page_heading:
+                raise ValueError(f"{key}: expected Bilibili board heading is required")
             if feed.adapter == "links":
                 if not feed.link_path:
                     raise ValueError(f"{key}: link path required for HTML sources")
