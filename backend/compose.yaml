@@ -6,3 +6,21 @@ services:
     environment:
       NODE_ENV: production
       CACHE_EXPIRE: 300
+  postgres:
+    image: postgres:17
+    profiles: [opinion]
+    ports:
+      - "127.0.0.1:5433:5432"
+    environment:
+      POSTGRES_USER: eventlens
+      POSTGRES_DB: eventlens
+      POSTGRES_PASSWORD: ${EVENTLENS_POSTGRES_PASSWORD:-eventlens-local-development}
+    volumes:
+      - opinion-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eventlens -d eventlens"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+volumes:
+  opinion-postgres:

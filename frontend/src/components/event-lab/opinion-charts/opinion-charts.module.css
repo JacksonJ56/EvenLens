@@ -1,0 +1,61 @@
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; container-type: inline-size; }
+.grid > :only-child { grid-column: 1 / -1; }
+.switcher { display: flex; justify-content: flex-end; gap: 3px; padding-bottom: 6px; }
+.switcher button { padding: 3px 8px; color: var(--color-muted); font-size: 11px; border-radius: 4px; }
+.switcher button[aria-pressed="true"] { background: var(--color-brand-soft); color: var(--color-brand); }
+.card { --opinion-series-0: #79b9e1; --opinion-series-1: #90bba4; --opinion-series-2: #b2a2ce; --opinion-series-3: #d1b780; --opinion-series-4: #8ca3bb; --opinion-anger: #d98b82; --opinion-worry: #ceb37b; --opinion-joy: #8abc9d; --opinion-empathy: #b29bc9; --opinion-sadness: #7f9fc9; --opinion-neutral: #8ba7b3; --opinion-unknown: #77808f; min-width: 0; padding: 18px; border: 1px solid var(--color-line); border-radius: var(--radius-card); background: var(--color-surface); }
+.card header { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; margin-bottom: 10px; }
+.card h3 { font-size: 14px; font-weight: 600; margin: 0 0 3px; }
+.card header span { font-size: 11px; color: var(--color-muted); }
+.card .tag { white-space: nowrap; border: 1px solid var(--color-line); border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+.caption { font-size: 11px; color: var(--color-muted); line-height: 1.8; }
+.donut { position: relative; }
+.donutCenter { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
+.donutCenter strong { font-size: 30px; font-weight: 550; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.donutCenter span { font-size: 11px; color: var(--color-muted); }
+.tooltip { background: var(--color-raised); color: var(--color-ink); border: 1px solid var(--color-line-strong); padding: 10px 13px; border-radius: 6px; display: grid; gap: 3px; max-width: 280px; white-space: normal; overflow-wrap: anywhere; box-shadow: 0 4px 16px #0002; font-size: 12px; }
+.tooltip small { color: var(--color-muted); font-size: 10px; }
+.legend { display: grid; gap: 3px; margin-top: 10px; }
+.legend button { display: flex; align-items: flex-start; text-align: left; gap: 8px; padding: 7px 6px; border-radius: 4px; font-size: 12px; transition: background 160ms; }
+.legend button:hover, .legend button[aria-pressed="true"] { background: var(--color-hover); }
+.legend button[aria-pressed="true"] { outline: 1px solid var(--color-brand-line); }
+.legend i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; margin-top: 7px; }
+.legend span { flex: 1; overflow-wrap: anywhere; }
+.legend strong { white-space: nowrap; font-variant-numeric: tabular-nums; font-size: 12px; font-weight: 500; }
+.legend small { color: var(--color-muted); font-size: 10px; }
+.expand { color: var(--color-brand); font-size: 11px; margin-top: 10px; padding: 4px; }
+.drilldown { border-top: 1px solid var(--color-line); margin-top: 14px; padding-top: 14px; min-width: 0; }
+.drilldown header > div { display: grid; gap: 4px; }
+.drilldown header button { padding: 5px; border-radius: 4px; color: var(--color-muted); }
+.drilldown p { font-size: 12px; }
+.drilldown nav { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 12px; font-size: 11px; }
+.drilldown nav button { color: var(--color-brand); padding: 4px; }
+.drilldown nav button:disabled { color: var(--color-muted); opacity: .5; }
+.comment { border-top: 1px solid var(--color-line); padding: 10px 0; }
+.comment blockquote, .contextDetail blockquote { white-space: pre-wrap; overflow-wrap: anywhere; padding-left: 10px; border-left: 2px solid var(--color-brand-line); margin: 8px 0; font-size: 12px; }
+.comment small { display: block; color: var(--color-muted); font-size: 10px; overflow-wrap: anywhere; }
+.comment a, .contextDetail a { display: flex; gap: 4px; align-items: center; margin-top: 7px; font-size: 11px; color: var(--color-brand); overflow-wrap: anywhere; }
+.skeleton { min-height: 110px; background: var(--color-hover); border-radius: 4px; display: grid; place-items: center; color: var(--color-muted); font-size: 12px; }
+.timeline { list-style: none; margin: 18px 0 0 6px; padding: 0 0 0 20px; border-left: 1px solid var(--color-line-strong); }
+.timeline li { position: relative; padding-bottom: 18px; }
+.timeline li::before { content: ""; position: absolute; left: -25px; top: 8px; width: 9px; height: 9px; border-radius: 50%; background: var(--color-brand); border: 2px solid var(--color-surface); }
+.timeline li > button { display: grid; gap: 4px; width: 100%; padding: 0 5px; text-align: left; }
+.timeline button span, .timeline button small { font-size: 11px; color: var(--color-muted); }
+.timeline button strong { font-size: 13px; font-weight: 500; overflow-wrap: anywhere; }
+.contextDetail { padding: 10px; margin-top: 8px; border-radius: 5px; background: var(--color-canvas); }
+@container (max-width: 650px) { .card { grid-column: 1 / -1; } }
+@media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .legend button { transition: none; } }
+:global([data-theme="light"]) .card { --opinion-series-0: #2879a9; --opinion-series-1: #40805f; --opinion-series-2: #8462a7; --opinion-series-3: #9a752f; --opinion-series-4: #55748e; --opinion-anger: #b04f44; --opinion-worry: #977025; --opinion-joy: #387a4f; --opinion-empathy: #865ea7; --opinion-sadness: #486f9d; --opinion-neutral: #4c7687; --opinion-unknown: #69717e; }
+.grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.composition { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; }
+.figure, .analysis { min-width: 0; }
+.analysis { padding-top: 4px; font-size: 13px; line-height: 1.9; }
+.analysis h4 { font-size: 13px; font-weight: 600; margin-bottom: 10px; color: var(--color-ink); }
+.analysis p { max-width: 54ch; margin: 8px 0; }
+.analysis small { color: var(--color-muted); font-size: 11px; }
+.analysis a { color: var(--color-brand); display: block; font-size: 11px; margin-top: 6px; }
+.dataDetails { margin-top: 10px; font-size: 11px; color: var(--color-muted); }
+.dataDetails > summary { cursor: pointer; padding: 4px; }
+.drilldown { max-width: 660px; }
+@container (min-width: 760px) { .composition { grid-template-columns: minmax(0, 43fr) minmax(0, 57fr); gap: 26px; } .analysis { border-left: 1px solid var(--color-line); padding-left: 24px; } }

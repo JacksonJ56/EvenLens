@@ -10,6 +10,13 @@ from .event_trace.clients import TraceClients
 from .event_trace.graph import create_graph
 from .event_trace.settings import TraceSettings
 from .settings import load_settings
+from .public_opinion.api import router as opinion_router
+from .public_opinion.settings import OpinionSettings
+from .public_opinion.store import OpinionStore
+from .public_opinion.workflow import OpinionTasks
+from .public_opinion.network import PublicDNSResolver
+from .public_opinion.sessions import PlatformSessions
+from .public_opinion.session_api import router as session_router
 
 
 @asynccontextmanager
@@ -27,10 +34,18 @@ async def lifespan(app: FastAPI):
         app.state.trace_settings = trace_settings
         app.state.trace_graph = create_graph(TraceClients(trace_client, trace_settings), trace_settings)
         app.state.trace_slots = asyncio.Semaphore(2)
+        app.state.opinion_settings = OpinionSettings.from_env()
+        app.state.opinion_sessions = PlatformSessions(app.state.opinion_settings)
+        app.state.opinion_store = OpinionStore(app.state.opinion_settings.database_url)
+        opinion_resolver = PublicDNSResolver(trace_client, enabled=app.state.opinion_settings.public_dns_fallback)
+        app.state.opinion_tasks = OpinionTasks(app.state.opinion_store, TraceClients(trace_client, trace_settings, resolve=opinion_resolver),
+                                             trace_settings, app.state.opinion_settings)
         worker = asyncio.create_task(service.run())
         try:
             yield
         finally:
+            await app.state.opinion_sessions.close()
+            await app.state.opinion_tasks.close()
             worker.cancel()
             await asyncio.gather(worker, return_exceptions=True)
             await service.close()
@@ -38,6 +53,8 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="EventLens", lifespan=lifespan)
 app.include_router(trace_router)
+app.include_router(opinion_router)
+app.include_router(session_router)
 
 
 @app.get("/api/boards/{platform}/{board}")

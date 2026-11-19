@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { EventLabFeature, EventLabTaskRequest, EventLabTaskResult } from "@/lib/event-lab-features";
+import type { OpinionProgress } from "@/types/public-opinion";
 
 interface TaskRun {
   id: number;
   feature: EventLabFeature;
   request: EventLabTaskRequest;
+  progress?: OpinionProgress;
 }
 
 export type EventLabTaskState = TaskRun & (
@@ -34,11 +36,14 @@ export function useEventLabTask() {
     setTask({ ...run, status: "running" });
 
     try {
-      const result = await feature.execute(request, controller.signal);
+      const result = await feature.execute(request, controller.signal, (progress) => {
+        if (!controller.signal.aborted) setTask({ ...run, status: "running", progress });
+      });
       if (!controller.signal.aborted) setTask({ ...run, status: "complete", result });
     } catch (error) {
       if (!controller.signal.aborted) {
-        setTask({ ...run, status: "error", message: error instanceof Error ? error.message : "任务执行失败，请重试" });
+        setTask((current) => ({ ...run, progress: current?.id === run.id ? current.progress : undefined,
+          status: "error", message: error instanceof Error ? error.message : "任务执行失败，请重试" }));
       }
     } finally {
       if (inFlight.current === controller) inFlight.current = null;

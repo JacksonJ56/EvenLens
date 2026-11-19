@@ -4,9 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { ThinkingOrb } from "thinking-orbs";
 import type { EventLabTaskState } from "@/hooks/use-event-lab-task";
 import { EventTraceTimeline } from "./event-trace-timeline";
+import { PublicOpinionReport } from "./public-opinion-report";
 import styles from "./event-lab-workflow.module.css";
 
-export function EventLabTaskWindow({ task, onRetry }: { task: EventLabTaskState; onRetry: () => void }) {
+export function EventLabTaskWindow({ task, onRetry, onCancel }: { task: EventLabTaskState; onRetry: () => void; onCancel: () => void }) {
   const reducedMotion = useReducedMotion();
   const body = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLElement>(null);
@@ -55,7 +56,11 @@ export function EventLabTaskWindow({ task, onRetry }: { task: EventLabTaskState;
               {task.status === "running" && (
                 <div className={styles.processing}>
                   <div data-theme="dark" aria-hidden="true"><ThinkingOrb state="solving" size={64} /></div>
-                  <strong>{task.feature.mode === "demo" ? "演示任务处理中…" : "AI 正在处理任务…"}</strong>
+                  <strong>{task.progress?.message ?? (task.feature.mode === "demo" ? "演示任务处理中…" : "AI 正在处理任务…")}</strong>
+                  {task.progress?.history && <ol aria-label="任务实际执行记录" style={{ fontSize: 12, color: "var(--color-muted)", textAlign: "left" }}>
+                    {task.progress.history.map((event, index) => <li key={`${index}/${event.at}`}>{event.message}</li>)}
+                  </ol>}
+                  {task.feature.id === "public_opinion" && <button type="button" className="outline-button" onClick={onCancel}>取消任务</button>}
                 </div>
               )}
               {task.status === "complete" && task.result.mode === "demo" && (
@@ -67,6 +72,7 @@ export function EventLabTaskWindow({ task, onRetry }: { task: EventLabTaskState;
               {task.status === "complete" && task.result.mode === "live" && (
                 <EventTraceTimeline trace={task.result.trace} />
               )}
+              {task.status === "complete" && task.result.mode === "opinion" && <PublicOpinionReport report={task.result.report} />}
               {task.status === "error" && (
                 <div className={styles.feedback} data-result="error">
                   <AlertCircle aria-hidden="true" size={18} />

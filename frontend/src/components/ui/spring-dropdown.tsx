@@ -7,6 +7,8 @@ interface Option {
   id: string;
   label: string;
   rank?: number;
+  disabled?: boolean;
+  reason?: string;
 }
 
 interface SpringDropdownProps {
@@ -15,6 +17,7 @@ interface SpringDropdownProps {
   options: readonly Option[];
   value?: string;
   invalid?: boolean;
+  error?: string;
   appearance?: "light";
   onChange: (id: string) => void;
 }
@@ -40,7 +43,7 @@ function DropdownMenu({ children, reducedMotion, side }: { children: ReactNode; 
   );
 }
 
-export function SpringDropdown({ label, placeholder, options, value, invalid, appearance, onChange }: SpringDropdownProps) {
+export function SpringDropdown({ label, placeholder, options, value, invalid, error, appearance, onChange }: SpringDropdownProps) {
   const id = useId();
   const root = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -52,6 +55,7 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, ap
   const selected = options.find((option) => option.id === value);
   const expanded = open && options.length > 0;
   const activeIndex = options.findIndex((option) => option.id === highlighted);
+  const available = options.filter((option) => !option.disabled);
 
   const measureMenu = useCallback(() => {
     if (!root.current) return;
@@ -94,11 +98,12 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, ap
   function show(last = false) {
     trigger.current?.focus({ preventScroll: true });
     measureMenu();
-    setHighlighted(selected?.id ?? options[last ? options.length - 1 : 0]?.id);
+    setHighlighted(selected && !selected.disabled ? selected.id : available[last ? available.length - 1 : 0]?.id);
     setOpen(true);
   }
 
   function select(option: Option) {
+    if (option.disabled) return;
     setOpen(false);
     if (option.id !== value) onChange(option.id);
   }
@@ -112,12 +117,13 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, ap
       event.preventDefault();
       const direction = event.key === "ArrowDown" ? 1 : -1;
       if (expanded) {
-        const next = Math.min(Math.max(activeIndex + direction, 0), options.length - 1);
-        setHighlighted(options[next].id);
+        const current = available.findIndex((option) => option.id === highlighted);
+        const next = Math.min(Math.max(current + direction, 0), available.length - 1);
+        setHighlighted(available[next]?.id);
       } else show(direction < 0);
     } else if (expanded && (event.key === "Home" || event.key === "End")) {
       event.preventDefault();
-      setHighlighted(options[event.key === "Home" ? 0 : options.length - 1].id);
+      setHighlighted(available[event.key === "Home" ? 0 : available.length - 1]?.id);
     } else if (expanded && (event.key === "Enter" || event.key === " ") && activeIndex >= 0) {
       event.preventDefault();
       select(options[activeIndex]);
@@ -128,7 +134,7 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, ap
     <div className={styles.field} ref={root} data-open={expanded} data-appearance={appearance}>
       <div className={styles.fieldHeading}>
         <span id={`${id}-label`} className={styles.label}>{label}</span>
-        {invalid && <span id={`${id}-error`} className={styles.error}>请选择</span>}
+        {invalid && <span id={`${id}-error`} className={styles.error}>{error ?? "请选择"}</span>}
       </div>
       <motion.button
         ref={trigger} type="button" role="combobox" className={styles.trigger} disabled={!options.length}
@@ -161,15 +167,17 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, ap
               style={{ maxHeight: menuSize.height }} onMouseDown={(event) => event.preventDefault()}>
               {options.map((option, index) => (
                 <motion.div key={option.id} className={styles.option} id={`${id}-option-${index}`} role="option"
-                  aria-selected={option.id === value} onPointerMove={() => setHighlighted(option.id)} onClick={() => select(option)}
+                  aria-selected={option.id === value} aria-disabled={option.disabled || undefined} title={option.reason}
+                  onPointerMove={() => { if (!option.disabled) setHighlighted(option.id); }} onClick={() => select(option)}
                   initial={{ y: reducedMotion ? 0 : -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
                   transition={reducedMotion ? instant : { ...springs.value, delay: Math.min(index, 6) * .035 }}>
-                  {index === activeIndex && (
+                  {index === activeIndex && !option.disabled && (
                     <motion.span className={styles.highlight} layoutId={`${id}-highlight`} initial={false}
                       transition={reducedMotion ? instant : springs.highlight} />
                   )}
                   {option.rank === undefined ? <span className={styles.dot} data-selected={option.id === value} /> : <span className={styles.rank}>{String(option.rank).padStart(2, "0")}</span>}
                   <span className={styles.optionLabel}>{option.label}</span>
+                  {option.disabled && <small>暂不支持</small>}
                   {option.id === value && <Check size={15} className={styles.check} aria-hidden="true" />}
                 </motion.div>
               ))}

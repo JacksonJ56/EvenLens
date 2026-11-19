@@ -8,3 +8,5 @@ next-env.d.ts
 __pycache__/
 .env
 .env.local
+backend/app/data/
+backend/data/

@@ -11,6 +11,11 @@ import type { EventLabEventContext, EventLabSelection } from "@/types/event-lab"
 import { EventLabOrb } from "./event-lab-orb";
 import { EventLabTaskWindow } from "./event-lab-task-window";
 import styles from "./event-lab-panel.module.css";
+import { getOpinionCapabilities } from "@/lib/api/public-opinion";
+import type { OpinionCapabilities } from "@/types/public-opinion";
+import { OpinionImport } from "./opinion-import";
+import { usePlatformSession } from "@/hooks/use-platform-session";
+import { PlatformSessionNotice } from "./platform-session-notice";
 
 interface EventLabPanelProps {
   active: boolean;
@@ -24,10 +29,18 @@ interface EventLabPanelProps {
 export function EventLabPanel({ active, selection, source, data, onChange, onReturn }: EventLabPanelProps) {
   const [featureId, setFeatureId] = useState<string>();
   const [submitted, setSubmitted] = useState(false);
+  const [capabilities, setCapabilities] = useState<OpinionCapabilities>();
+  const [capabilityError, setCapabilityError] = useState("");
+  const [capabilityAttempt, setCapabilityAttempt] = useState(0);
+  const [imported, setImported] = useState<{ key: string; id: string; count: number }>();
   const { task, run, cancel } = useEventLabTask();
   const { category, platform, board, query } = source;
   const feature = eventLabFeatures.find(({ id }) => id === featureId);
   const busy = task?.status === "running";
+  const opinion = feature?.id === "public_opinion";
+  const platformCapability = platform ? capabilities?.platforms[platform.id] : undefined;
+  const unsupported = Boolean(opinion && platform && capabilities && !platformCapability?.supported);
+  const platformError = unsupported ? "当前平台暂不支持公众舆情分析，请重新选择支持的平台。" : undefined;
   const state = data?.state;
   const result = state?.status === "ready" && state.result.mode === "live" ? state.result : undefined;
   const trends = result?.items ?? [];
@@ -39,7 +52,21 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
     feedId: query.board, boardId: explicitBoard?.id, boardName: explicitBoard?.label,
     capturedAt: result?.updatedAt, trendId: trend.id, title: trend.title, url: trend.url || undefined, trend,
   } : undefined;
-  const matchesTask = !task || (active && context?.trendId === task.request.event.trendId);
+  const contextKey = context ? `${context.categoryId}/${context.platformId}/${context.feedId}/${context.trendId}` : "";
+  const dataset = imported?.key === contextKey ? imported : undefined;
+  const session = usePlatformSession(platform?.id, Boolean(opinion && platformCapability?.supported));
+  const sessionBlocked = Boolean(opinion && platform && !dataset && !session.ready);
+  const matchesTask = !task || (active && context?.trendId === task.request.event.trendId &&
+    context?.platformId === task.request.event.platformId && context?.feedId === task.request.event.feedId &&
+    context?.categoryId === task.request.event.categoryId && featureId === task.feature.id);
+
+  useEffect(() => {
+    if (!opinion) return;
+    const controller = new AbortController();
+    getOpinionCapabilities(controller.signal).then((value) => { setCapabilities(value); setCapabilityError(""); })
+      .catch(() => { if (!controller.signal.aborted) setCapabilityError("平台能力配置读取失败，请检查后端后重试"); });
+    return () => controller.abort();
+  }, [opinion, capabilityAttempt]);
 
   useEffect(() => {
     if (!active || !result || !selection.trendId || trend) return;
@@ -53,9 +80,9 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
-    if (context && feature) {
+    if (context && feature && !unsupported && (!opinion || (capabilities && (dataset || session.ready)))) {
       setSubmitted(false);
-      void run(feature, { event: context, featureId: feature.id });
+      void run(feature, { event: context, featureId: feature.id, datasetId: opinion ? dataset?.id : undefined });
     } else {
       setSubmitted(true);
       const form = event.currentTarget;
@@ -68,6 +95,7 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
     onChange({});
     setFeatureId(undefined);
     setSubmitted(false);
+    setImported(undefined);
   }
 
   let status: string | undefined;
@@ -103,11 +131,14 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
                 onChange({ categoryId: next.id });
               }
             }} />
-          <SpringDropdown key={category?.id} label="热点平台" placeholder="选择平台" value={platform?.id} invalid={submitted && !platform}
-            options={category?.platforms.map(({ id }) => ({ id, label: platforms[id].name })) ?? []}
+          <SpringDropdown key={category?.id} label="热点平台" placeholder="选择平台" value={platform?.id}
+            invalid={unsupported || (submitted && !platform)} error={platformError}
+            options={category?.platforms.map(({ id }) => ({ id, label: platforms[id].name,
+              disabled: opinion && !capabilities?.platforms[id]?.supported,
+              reason: opinion && !capabilities?.platforms[id]?.supported ? "当前功能暂不支持该平台" : undefined })) ?? []}
             onChange={(id) => {
               const next = category?.platforms.find((item) => item.id === id);
-              if (next) {
+              if (next && (!opinion || capabilities?.platforms[id]?.supported)) {
                 cancel();
                 onChange({ categoryId: selection.categoryId, platformId: next.id });
               }
@@ -134,6 +165,18 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
               setFeatureId(id);
             }} />
         </div>
+        {opinion && <div className={styles.opinionStatus}>
+          {capabilityError ? <span role="alert">{capabilityError} <button type="button" className="outline-button"
+            onClick={() => setCapabilityAttempt((value) => value + 1)}>重新读取</button></span> : !capabilities ? <span role="status">正在读取平台能力…</span> : null}
+          {!unsupported && platform && platformCapability?.supported && <PlatformSessionNotice name={platforms[platform.id].name} session={session} />}
+          {capabilities && category && !category.platforms.some(({ id }) => capabilities.platforms[id]?.supported) &&
+            <p>当前分区暂无支持公众舆情分析的平台，请选择其他分区。</p>}
+          {dataset && <p role="status">已绑定当前热点的 {dataset.count} 条一级评论。</p>}
+          {!dataset && sessionBlocked && <p>在线采集需先验证该平台登录会话；也可以导入授权评论后执行。</p>}
+          {!unsupported && <OpinionImport key={contextKey} event={context} onImported={(id, count) => {
+            cancel(); setImported({ key: contextKey, id, count });
+          }} />}
+        </div>}
         <div className={styles.footer}>
           <div className={styles.details}>
             {status && <span role="status">{status}</span>}
@@ -147,7 +190,7 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
             <button type="button" className="outline-button" onClick={clearSelections}>
               <X size={14} aria-hidden="true" />清空选项
             </button>
-            <button type="submit" className={styles.execute} disabled={busy} aria-controls={task ? "event-lab-task-window" : undefined}>
+            <button type="submit" className={styles.execute} disabled={busy || unsupported || sessionBlocked || (opinion && !capabilities)} aria-controls={task ? "event-lab-task-window" : undefined}>
               {busy ? <Clock3 size={14} aria-hidden="true" /> : <Play size={14} aria-hidden="true" />}
               {busy ? "执行中…" : "执行"}
             </button>
@@ -159,7 +202,9 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
         {task?.status === "complete" && (task.result.mode === "demo" ? "演示流程已完成" : "分析已完成")}
         {task?.status === "error" && "任务执行失败，可重试"}
       </span>
-      {task && matchesTask && <EventLabTaskWindow task={task} onRetry={() => { void run(task.feature, task.request); }} />}
+      {task && matchesTask && <EventLabTaskWindow task={task} onCancel={cancel} onRetry={() => {
+        void run(task.feature, { ...task.request, resumeTaskId: task.progress?.id });
+      }} />}
     </section>
   );
 }

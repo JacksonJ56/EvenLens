@@ -1,8 +1,8 @@
 import type { EventLabEventContext } from "@/types/event-lab";
 import type { EventTraceResponse, TraceRequest } from "@/types/event-trace";
 
-export async function requestEventTrace(event: EventLabEventContext, signal: AbortSignal): Promise<EventTraceResponse> {
-  const payload: TraceRequest = {
+export function eventPayload(event: EventLabEventContext): TraceRequest {
+  return {
     function_id: "event_tracing",
     selection: {
       category_id: event.categoryId, category_name: event.categoryName,
@@ -15,6 +15,10 @@ export async function requestEventTrace(event: EventLabEventContext, signal: Abo
       captured_at: event.capturedAt ?? null,
     },
   };
+}
+
+export async function requestEventTrace(event: EventLabEventContext, signal: AbortSignal): Promise<EventTraceResponse> {
+  const payload = eventPayload(event);
   const response = await fetch("/api/event-trace", {
     method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
     cache: "no-store", signal,

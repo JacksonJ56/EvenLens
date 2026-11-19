@@ -110,3 +110,8 @@ npm run dev
 - 在 `backend/` 运行 `python -m unittest discover -s tests -v`。
 - 在 `frontend/` 运行 `npm run typecheck` 和 `npm run build`。
 - 后续如需正文，后端可在 `Trend.preview.blocks` 中提供 `paragraph` 或 `image`。只有摘要时填写 `Trend.preview.summary`。阅读区按实际取得的字段展示。
+# 公众舆情分析（第二个实验功能）
+
+已接入现有事件实验室的「公众舆情分析」，复用热点级联选择。支持后台任务、平台能力校验、授权评论 JSON/CSV 导入、两个 Deep Agent、分批分析、来源引用及结构化报告。在线采集需要单独安装 MediaCrawler 并配置适用授权和合法平台会话；没有数据时不会用演示结果填充。
+
+新增后端依赖后请重新安装 `backend/requirements.txt` 并重启 FastAPI。详细启动方式、PostgreSQL、环境变量、接口、逐文件调用链和验证边界见 [公众舆情功能说明](backend/PUBLIC_OPINION.md)；评论文件字段见 [导入格式](frontend/public/public-opinion-import.md)。

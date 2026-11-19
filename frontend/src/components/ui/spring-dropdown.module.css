@@ -54,3 +54,5 @@
   --dropdown-highlight: #eaf2fa;
 }
 
+.option[aria-disabled="true"] { opacity: .38; cursor: not-allowed; }
+.option small { white-space: nowrap; font-size: 10px; }
