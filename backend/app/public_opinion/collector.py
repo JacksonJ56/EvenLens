@@ -18,7 +18,6 @@ from .settings import OpinionSettings, PLATFORMS
 
 POST_PATTERNS = {
     "xiaohongshu": (r"(?:www\.)?xiaohongshu\.com", r"/(?:explore|discovery/item)/([a-fA-F0-9]{24})(?:/|$)"),
-    "douyin": (r"(?:www\.)?douyin\.com", r"/video/(\d+)(?:/|$)"),
     "kuaishou": (r"(?:www\.)?kuaishou\.com", r"/short-video/([a-zA-Z0-9_-]+)(?:/|$)"),
     "bilibili": (r"(?:www\.)?bilibili\.com", r"/video/(BV[a-zA-Z0-9]{10}|av\d+)(?:/|$)"),
     "weibo": (r"(?:www\.|m\.)?weibo\.(?:com|cn)", r"/(?:detail|status)/([0-9]+)(?:/|$)"),
@@ -166,6 +165,15 @@ class MediaCrawlerAdapter:
                                 rows.append(row)
                         except (ValueError, TypeError, KeyError):
                             warnings.append(f"帖子 {post.id} 的一条损坏记录已过滤。")
+                metadata=output.with_suffix('.status.json')
+                if code=='tieba' and metadata.is_file() and metadata.stat().st_size<1000:
+                    status=json.loads(metadata.read_text()).get('status')
+                    if status=='restricted':
+                        if not rows:raise ValueError('贴吧要求本人登录或安全验证，已停止采集；请在官方页面确认会话，不会绕过限制。')
+                        warnings.append('贴吧要求本人验证，已停止后续采集，仅保留实际取得的评论。');break
+                    if status!='completed':warnings.append(f'贴吧帖子 {post.id} 未完整读取，仅保留实际返回的评论（{status}）。')
+        if any(post.platform_id=='tieba' for post in posts):
+            warnings.append('贴吧按页面返回的楼层顺序读取一级回复，排除原帖与楼中楼；未确认热门排序，不代表热门评论或全平台观点。')
         if not rows:
             raise ValueError("采集未返回有效评论：检查合法会话、平台访问限制或 MediaCrawler 版本；也可导入授权评论。")
         return rows, warnings

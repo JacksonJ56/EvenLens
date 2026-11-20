@@ -9,8 +9,9 @@ from .collector import identify_post, normalized_time
 from .llm import BudgetExceeded, ToolPolicy
 from .prompts import DISCOVERY
 from .schemas import DiscoveryChoice, Post
+from .tieba_protocol import topic_url
 
-DOMAINS = {"xiaohongshu": "xiaohongshu.com", "douyin": "douyin.com", "kuaishou": "kuaishou.com",
+DOMAINS = {"xiaohongshu": "xiaohongshu.com", "kuaishou": "kuaishou.com",
            "bilibili": "bilibili.com", "weibo": "weibo.com OR site:weibo.cn",
            "tieba": "tieba.baidu.com"}
 
@@ -100,6 +101,10 @@ class PostDiscovery:
                 return self.pages[key]
             if self.fetch_count >= self.settings.max_fetches:
                 return {"error": "已达到网页读取上限"}
+            prefer_native=platform=='tieba' and self.reader and self.reader.available(platform)
+            if prefer_native and self.authorized_attempts>=min(3,self.settings.max_fetches):
+                self.pages[key]={'error':'本次授权正文读取次数已用完，该候选尚未读取，不能判断是否可访问；请验证并提交已有候选。','status':'not_read_budget'}
+                self.record();return self.pages[key]
             self.fetch_count += 1
             self.progress("post_reading", "正在读取候选帖子")
             self.record()
@@ -108,10 +113,14 @@ class PostDiscovery:
             published_at = None
             fallback_allowed = True
             try:
-                page = await self.provider.fetch(candidate["url"])
-                if len(page.content.strip()) < 80:
-                    page = None
-                    self.errors.append("公开网页正文不足以确认帖子，尝试已授权的平台阅读")
+                if prefer_native:
+                    resolver=getattr(self.provider,'resolve',None)
+                    if resolver:await resolver(candidate['url'])
+                else:
+                    page = await self.provider.fetch(candidate["url"])
+                    if len(page.content.strip()) < 80:
+                        page = None
+                        self.errors.append("公开网页正文不足以确认帖子，尝试已授权的平台阅读")
             except Exception as error:
                 from ..event_trace.clients import ProviderError, UnsafeURL
                 message = str(error) if isinstance(error, (ProviderError, UnsafeURL)) else "帖子网页读取失败"
@@ -121,10 +130,10 @@ class PostDiscovery:
                     fallback_allowed = False
                 self.errors.append(message)
             if page is None:
-                self.public_fetch_failures += 1
+                if not prefer_native:self.public_fetch_failures += 1
                 if fallback_allowed and not self.authorized_restricted and self.reader and self.reader.available(platform) and self.authorized_attempts < min(3, self.settings.max_fetches):
                     self.authorized_attempts += 1
-                    self.progress("post_reading", "公开读取未成功，正在通过已授权的平台会话读取帖子")
+                    self.progress("post_reading", "正在通过授权贴吧页面读取帖子" if prefer_native else "公开读取未成功，正在通过已授权的平台会话读取帖子")
                     self.record()
                     try:
                         native = await self.reader.read(platform, candidate["url"])
@@ -188,6 +197,31 @@ class PostDiscovery:
             return {"ranked_post_ids": ranked}
 
         tools = [search_web, fetch_page, validate_posts, rank_posts]
+        if platform=='tieba' and payload.event.url and topic_url(payload.event.url) and self.reader and self.reader.available(platform):
+            @tool
+            async def read_selected_topic() -> dict:
+                """读取用户选中贴吧热点的官方聚合页，发现真实帖子链接；不把聚合页标题当作帖子正文。"""
+                if self.fetch_count>=self.settings.max_fetches:return {'error':'已达到网页读取上限'}
+                self.fetch_count+=1
+                self.progress('post_discovery','正在读取选中贴吧热点的官方关联帖子');self.record()
+                try:
+                    resolver=getattr(self.provider,'resolve',None)
+                    if resolver:await resolver(payload.event.url)
+                    items=await self.reader.read(platform,payload.event.url,topic=True)
+                except Exception as error:
+                    from .post_reader import PostReadError
+                    if isinstance(error,PostReadError) and error.code=='restricted':
+                        self.authorized_restricted=True;self.record()
+                        raise ValueError('贴吧官方热点页面要求本人验证或拒绝访问，已停止任务；请检查官方会话。') from None
+                    self.errors.append('贴吧官方聚合页未取得可验证帖子链接');self.record()
+                    return {'error':self.errors[-1]}
+                result=[]
+                for item in items:
+                    candidate={'url':item['url'],'title':'贴吧帖子 '+item['post_id'],'date':None}
+                    self.candidates[url_key(public_url(item['url']))]=candidate;result.append(candidate)
+                self.record()
+                return {'posts':result,'scope':'官方聚合页的真实链接；尚未读取或确认帖子相关性，必须继续 fetch_page、validate_posts、rank_posts。'}
+            tools.append(read_selected_topic)
         agent = create_deep_agent(self.model, tools=tools, name="PostDiscoveryAgent", system_prompt=DISCOVERY,
             response_format=ToolStrategy(DiscoveryChoice, handle_errors=False),
             middleware=[ToolPolicy({t.name for t in tools}, self.budget)])
@@ -218,6 +252,8 @@ class PostDiscovery:
             raise ValueError("未发现可读取、验证且相关的帖子；" + self.failure_detail() +
                              "。公开搜索和第三方 Fetch 不使用本机登录会话；可导入授权评论，或检查原始帖子是否仍可访问。")
         warnings = choice.limitations + ["帖子来自公开网页检索或用户选中原始链接，并非完整平台站内搜索。"]
+        if any(page.get('status')=='not_read_budget' for page in self.pages.values()):
+            warnings.append('部分候选因本次授权正文读取预算已用完而未实际读取，不能据此判断帖子已删除、无法访问或与事件无关。')
         if any(post.read_method == "authorized_platform" for post in posts):
             warnings.append("部分帖子通过本机已授权的平台会话读取，未向第三方 Fetch 提供 Cookie；仅核验返回的文字，未核验图片或视频内容。")
         return posts[:self.settings.max_posts], warnings, {

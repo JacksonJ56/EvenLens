@@ -2,6 +2,22 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
+function isLocalSessionAction(request: Request): boolean {
+  try {
+    // Next.js may expose an internal localhost URL even when the browser used
+    // 127.0.0.1. Compare with the actual Host, restricted to loopback addresses;
+    // never trust a client-supplied forwarded host or admit another origin.
+    const host = request.headers.get("host");
+    if (!host) return false;
+    const expected = new URL(`${new URL(request.url).protocol}//${host}`);
+    if (!["localhost", "127.0.0.1", "[::1]"].includes(expected.hostname) || expected.host !== host) return false;
+    const origin = request.headers.get("origin");
+    return (!origin || origin === expected.origin) && request.headers.get("sec-fetch-site") !== "cross-site";
+  } catch {
+    return false;
+  }
+}
+
 async function proxy(request: Request, context: { params: Promise<{ path: string[] }> }) {
   const { path } = await context.params;
   // Explicit namespace only; no arbitrary proxy targets or user-controlled upstream hosts.
@@ -10,11 +26,8 @@ async function proxy(request: Request, context: { params: Promise<{ path: string
     return NextResponse.json({ detail: "无效的舆情 API 路径" }, { status: 404 });
   }
   const localAction = path[0] === "sessions" && request.method !== "GET";
-  if (localAction) {
-    const origin = request.headers.get("origin");
-    if ((origin && origin !== new URL(request.url).origin) || request.headers.get("sec-fetch-site") === "cross-site") {
-      return NextResponse.json({ detail: "请从本机 EventLens 页面操作平台登录" }, { status: 403 });
-    }
+  if (localAction && !isLocalSessionAction(request)) {
+    return NextResponse.json({ detail: "请从本机 EventLens 页面操作平台登录" }, { status: 403 });
   }
   try {
     let body: ArrayBuffer | undefined;

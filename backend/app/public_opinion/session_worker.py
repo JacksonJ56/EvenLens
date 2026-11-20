@@ -29,11 +29,16 @@ async def verify(platform, context, page):
         if data.get(key) is True:
             return "verified"
         return "expired" if data.get(key) is False else "unverified"
+    if platform == "tieba":
+        from tieba_protocol import ACCOUNT_URL,account_page,server_login
+        response=await context.request.get(ACCOUNT_URL,timeout=12000,max_redirects=0)
+        if response.status!=200:return 'unverified'
+        url=account_page(await response.json())
+        if not url:return 'unverified'
+        response=await context.request.get(url,timeout=12000,max_redirects=0)
+        if response.status!=200:return 'unverified'
+        return server_login(await response.text())
     if not official_page(platform, page.url):
-        return "unverified"
-    if platform in {"douyin", "tieba"}:
-        # Upstream pong() only tests cookies/localStorage here, not server validity.
-        # Keep these honestly unverified until a reliable remote checker is available.
         return "unverified"
     modules = {
         "xiaohongshu": ("xhs", "XiaoHongShuCrawler", "create_xhs_client"),
@@ -75,7 +80,7 @@ async def main():
             if mode == "check":
                 raw = os.environ.get(f"MEDIACRAWLER_COOKIES_{profile['code'].upper()}", "")
                 await context.add_cookies([{"name": name, "value": value, "domain": "." + profile["domains"][0], "path": "/"} for name, value in cookie_pairs(raw).items()])
-                if platform not in {"weibo", "bilibili"}:
+                if platform not in {"weibo", "bilibili", "tieba"}:
                     await page.goto(profile["home"], wait_until="domcontentloaded", timeout=18000)
                 async with asyncio.timeout(20):
                     status = await verify(platform, context, page)
@@ -102,7 +107,7 @@ async def main():
                 await page.goto(profile["home"], wait_until="domcontentloaded", timeout=18000)
             async with asyncio.timeout(20):
                 status = await verify(platform, context, page)
-            cookie = cookie_header(platform, await context.cookies())
+            cookie = cookie_header(platform, await context.cookies([profile['home']]) if platform=='tieba' else await context.cookies())
             result(status if cookie else "unverified", platform, cookie)
         finally:
             await browser.close()

@@ -1,6 +1,6 @@
 # EventLens 公众舆情分析 · 实现与使用
 
-当前支持配置为微博、小红书、抖音、快手、哔哩哔哩、百度贴吧六个平台；各平台的实际采集条件仍以能力接口、运行环境与授权状态为准。知乎仅保留热榜与事件溯源，不支持公众舆情分析，在该功能的平台下拉栏中置灰。
+当前支持配置为微博、小红书、快手、哔哩哔哩、百度贴吧五个平台；各平台的实际采集条件仍以能力接口、运行环境与授权状态为准。抖音、知乎仅保留热榜与事件溯源，不支持公众舆情分析，在该功能的平台下拉栏中置灰。
 
 2026-11-20 移除范围：知乎舆情平台/搜索/帖子映射、评论采集、正文阅读、登录验证、专用浏览器快照及访问预检查代码，以及专用环境变量和已退役功能的测试。共用分析、其他平台登录、授权导入、小红书阅读和 DNS 故障切换保留。新建任务、导入及历史任务恢复均先做平台校验；知乎返回422，已有任务与报告不删除。独立 MediaCrawler 仓库不修改。
 
@@ -14,7 +14,7 @@
 
 已经实现：复用级联选择、统一平台能力校验、JSON/CSV 授权评论导入、持久化后台任务、查询/取消/重试恢复、两个独立 Deep Agent、LangGraph 固定流程、按来源顺序截取评论、分批语义分析与缓存、程序统计、节日日历与外部语境研究、引用校验、动态报告和评论原文按需读取。
 
-公众舆情分析现支持六个平台，不代表均已实采成功。知乎不再支持此功能，保留其热榜与事件溯源。MediaCrawler 未配置合法会话时，API 返回明确的 503；导入路径仍可使用。没有搜索或评论结果时不会填充演示资料。
+公众舆情分析现支持五个平台，不代表均已实采成功。抖音、知乎不再支持此功能，保留其热榜与事件溯源。MediaCrawler 未配置合法会话时，API 返回明确的 503；导入路径仍可使用。没有搜索或评论结果时不会填充演示资料。
 
 ## 启动
 
@@ -75,7 +75,7 @@ PUBLIC_OPINION_DATABASE_URL=postgresql+psycopg://eventlens:eventlens-local-devel
 
 | 方法/路径 | 输入/输出 |
 | --- | --- |
-| GET /capabilities | 六个平台的理论支持、adapter 实现状态、采集配置状态和原因 |
+| GET /capabilities | 五个平台的理论支持、adapter 实现状态、采集配置状态和原因 |
 | POST /datasets/import | `ImportRequest`：selection、event、format、content、authorized=true；返回 dataset_id、stats、binding |
 | POST /tasks | `OpinionRequest`：function_id=public_opinion、selection、event、可选 dataset_id、idempotency_key；返回任务，202 |
 | GET /tasks/{id} | 真实 status、stage、message、history 和模型用量 |
@@ -89,7 +89,7 @@ PUBLIC_OPINION_DATABASE_URL=postgresql+psycopg://eventlens:eventlens-local-devel
 
 ## 前端平台能力与联动
 
-唯一后端能力表是 `app/public_opinion/settings.py::PLATFORMS`：EventLens ID → MediaCrawler ID。前端通过能力接口读取，不复制另一份七平台判断表。
+唯一后端能力表是 `app/public_opinion/settings.py::PLATFORMS`：EventLens ID → MediaCrawler ID。前端通过能力接口读取，不复制另一份平台判断表。
 
 - `frontend/src/components/event-lab/event-lab-panel.tsx`：复用 Workspace 传来的 selection、source、useBoard 数据；本地 `featureId` 为 public_opinion 时启用能力限制。
 - `SpringDropdown` 的 option 支持 disabled/reason，鼠标选择有 guard；方向键、Home/End 只在可用选项中移动，Enter 也有禁用检查。
@@ -142,11 +142,10 @@ Worker 实际调用参数：`--platform <code> --lt cookie --type detail --speci
 | EventLens / MC | 已核实源码接口 | 排序记录 |
 | --- | --- | --- |
 | xiaohongshu / xhs | `/api/sns/web/v2/comment/page`，cursor | unknown，未找到明确热门参数 |
-| douyin / dy | `/aweme/v1/web/comment/list/`，cursor | unknown |
 | kuaishou / ks | `request_rest_v2("/rest/v/photo/comment/list", ...)`，pcursor | unknown；当前热点目录无快手入口 |
 | bilibili / bili | `/x/v2/reply/wbi/main`，DEFAULT=0 | 上游 field.py 注释为 popularity；运行时再检查枚举，记录 hot，不承诺等同网页排名 |
 | weibo / wb | `/comments/hotflow`，max_id/max_id_type | unknown；接口名不单独证明前端热门排序 |
-| tieba / tieba | 浏览器读取帖子页面和楼层分页 | unknown，保留提取顺序，不称热度榜 |
+| tieba / tieba | 正常官方帖子页面、原生页面返回的 page_pc 数据；复用 MediaCrawler 提取器 | unknown，保留楼层/接口先后顺序，排除楼主原帖与楼中楼，不称热门排序 |
 
 在线 MVP 采集一级评论；**二级回复目前通过导入路径支持，在线补充采集未启用**。不同版本、平台接口、会话状态仍需实采验证；能力接口的 collector_ready 是配置就绪，不是实时成功保证。
 
@@ -174,7 +173,7 @@ npm run build
 
 `tests/test_public_opinion.py` 使用测试评论和可调用工具的 ScriptedModel，运行真实 Deep Agents 与 LangGraph，不把预生成报告接进正式模式。`tests/serve_opinion_fixture.py` 是单独的 TEST ONLY 浏览器验收服务器，app.main 从不导入它，数据只存在临时目录。它不能用于验证真实采集或模型研究质量。
 
-本次实际联网检查：现有模型成功完成 Deep Agents 结构化工具输出；官方 Search 请求超时；Fetch 被本地公网 DNS 安全检查拦截，公开站点在此环境被解析为 198.18.* 测试地址。没有放宽 SSRF 规则。MediaCrawler 未提供合法会话及授权配置，**七平台端到端在线采集尚未验证**。导入、图编排、报告、引用等在测试数据下通过；用户导入真实授权评论后可进行真实 LLM 分析，不能把测试报告当真实舆情。
+本次实际联网检查：现有模型成功完成 Deep Agents 结构化工具输出；官方 Search 请求超时；Fetch 被本地公网 DNS 安全检查拦截，公开站点在此环境被解析为 198.18.* 测试地址。没有放宽 SSRF 规则。MediaCrawler 未提供合法会话及授权配置，**当时的多平台端到端在线采集尚未验证**。导入、图编排、报告、引用等在测试数据下通过；用户导入真实授权评论后可进行真实 LLM 分析，不能把测试报告当真实舆情。
 
 PostgreSQL 17 已在隔离临时 schema 中实际验证数据集、评论顺序、缓存、检查点和报告写读；结束只清理本次测试 schema。自动化回归仍使用临时 SQLite，方便无 Docker 环境运行。
 
@@ -192,7 +191,7 @@ PostgreSQL 17 已在隔离临时 schema 中实际验证数据集、评论顺序�
 | app/public_opinion/api.py | 能力、导入、创建、查询、取消、恢复、报告和引用接口 |
 | app/public_opinion/store.py | SQLAlchemy 表、任务、顺序评论、缓存、外部资料和报告读写 |
 | app/public_opinion/preparation.py | JSON/CSV 校验、清洗、按序去重截取、数据统计 |
-| app/public_opinion/collector.py | 七平台 URL/ID 识别、受控子进程及评论字段转换 |
+| app/public_opinion/collector.py | 受支持平台 URL/ID 识别、受控子进程及评论字段转换 |
 | app/public_opinion/crawler_worker.py | 独立环境启动真实 MediaCrawler detail 模式、最小化顺序回调输出 |
 | app/public_opinion/llm.py | 复用模型配置、硬预算、实际 usage、工具权限策略 |
 | app/public_opinion/prompts.py | 帖子发现、舆情研究、批次分析的独立提示词 |
@@ -233,7 +232,7 @@ MediaCrawler 子进程只继承必要系统/网络环境及当前平台 Cookie�
 - 使用仓库固定的 Python 3.11，已创建独立 `.venv`（Python 3.11.18），依据 uv.lock 安装 89 个依赖。安装时使用临时 uv 工具；日常运行可以直接使用下面的 Python 路径。
 - Playwright 1.61.0，Chromium 149.0.7827.55，标准无头模式实际启动/关闭成功。
 - `backend/.env` 仅补充或更新 `MEDIACRAWLER_HOME` 和 `MEDIACRAWLER_PYTHON`，已有 API Key 未改；未启用采集授权、未填写 Cookie。
-- 验证通过：`main.py --help`、Node.js/ExecJS、EventLens `MediaCrawlerAdapter.preflight()`；上游 StoreFactory、B站评论顺序、抖音/快手 URL 与贴吧 detail 参数测试共 30 项通过。
+- 验证通过：`main.py --help`、Node.js/ExecJS、EventLens `MediaCrawlerAdapter.preflight()`；上游 StoreFactory、B站评论顺序、当时的平台 URL 与贴吧 detail 参数测试共 30 项通过。
 - 本次未登录任何平台、未执行真实采集，因此安装完成不代表平台会话或采集授权已配置。
 
 日常查看命令：
@@ -284,7 +283,7 @@ MEDIACRAWLER_PYTHON=/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bi
 
 2026-11-19 真实验证：同一用户选择事件的官方 Search 返回可解析帖子，Fetch 成功读取，2 次检索后验证 5 个帖子；修复后的完整 MediaCrawlerAdapter 对首帖采集 3 条真实一级评论、顺序 1–3、无采集警告。此记录证明发现和首帖采集，不等于所有平台或完整分析报告验证通过。自动化测试 64 项通过，测试不消耗真实 API 额度。
 
-随后恢复同一任务，真实完成 11 条一级评论的主题、情绪、观点与代表评论模块，并保存报告。状态为 partial：其中一帖采集未完整结束，后续模型调用触及预算准入上限，保留已完成模块；未生成缺少核验的宏观关联。不是全平台或完整覆盖，其他六个平台在线会话未验证。未提高预算上限或使用模拟评论填充。
+随后恢复同一任务，真实完成 11 条一级评论的主题、情绪、观点与代表评论模块，并保存报告。状态为 partial：其中一帖采集未完整结束，后续模型调用触及预算准入上限，保留已完成模块；未生成缺少核验的宏观关联。不是全平台或完整覆盖，其他平台在线会话未验证。未提高预算上限或使用模拟评论填充。
 
 ## 舆情报告可视化（2026-11-19）
 
@@ -379,7 +378,8 @@ npm run build
 - 微博：官方移动端 `/api/config` 的 login 布尔状态；已用本机已有授权会话实际验证通过。
 - 哔哩哔哩：官方 `/x/web-interface/nav` 的 isLogin 状态；调用逻辑已实现，尚无该平台账号完成本机真实登录验收。
 - 小红书：复用当前 MediaCrawler `create_xhs_client().query_self()` 与 selfinfo success；快手复用当前 GraphQL pong。均已接入交互与验证逻辑，仍需用户本人登录后确认当前环境可用性。
-- 抖音、贴吧：当前上游 pong 仅依赖 Cookie/localStorage 标记，无法可靠证明服务器会话仍有效。本版明确说明限制，不开放会制造“已验证”假象的在线登录入口，仍支持授权评论导入。后续须补充并实测可靠的远端验证器再开放；这不是声明平台本身无法登录。
+- 贴吧：已启用官方窗口登录及服务器状态核验。通过官方最新热点列表动态选择官方页面，读取服务器新返回的 `PageData.user.is_login` 和正数用户 ID；不凭 BDUSS 是否存在或上游 pong 判定登录。凭据仅保存于本机后端，页面刷新或后端重启后可无界面重新检查，无需再次扫码。
+- 抖音、知乎：已移除公众舆情分析的登录、读取、采集与 Agent 适配。能力接口不再列出它们，前端沿用统一能力校验置灰；任务创建、导入和旧任务恢复均返回明确的 422 暂不支持。热榜与事件溯源继续保留。
 - 不为当前热榜目录中不存在的快手新增数据源。
 
 运行约束：这是本机开发版登录协调器，仅本机 GUI 环境可用，不是远程多用户账号系统。不挂载个人日常浏览器资料，不绕过验证码、访问限制或平台验证。一次只允许一个交互式登录、最多两个会话操作；重复点击复用同一 job，校验最长 45 秒、登录最长 330 秒，服务关闭会取消并关闭子进程。动作接口检查本机来源与自定义头，Next.js 代理拒绝跨站动作；不允许外部网页触发本机浏览器。
@@ -442,3 +442,32 @@ GET report 不调用模型、不自动补写历史内容。旧报告的实际 in
 修改：network.py、tests/test_opinion_budget_network.py、.env.example 和本文。120 项后端测试通过，涵盖备用服务接管、私有地址遇另一查询超时仍须拒绝、全部服务失败不放行、Fake-IP 开关及缓存。修复后的真实小红书域名公网核验通过；DNS 通过不等于该帖子正文、登录会话或评论采集已经验证成功。
 
 同一失败任务的原始链接进一步验证：公网校验通过；第三方 DeepSeek Fetch 仍返回 HTTP 404，随后现有本机授权阅读器取得身份匹配的 57 字符真实正文。此验证没有运行搜索、LLM、评论采集或完整 Agent 任务，不代表评论与最终报告已验收。后端已重启加载修复，用户可从原失败任务“重试”。
+
+## 抖音公众舆情功能移除（2026-11-20）
+
+按用户要求撤除抖音专用浏览器、会话快照、页面读取、搜索工具和评论采集实现；删除该平台的能力映射、URL 识别、MediaCrawler 工厂、登录配置及示例凭据。已清理本机抖音专用 Cookie 与快照，保留其他平台配置和历史任务。前端复用能力接口，无需维护新的禁用名单；切换回事件溯源可以继续选择抖音。历史抖音舆情任务不能恢复执行。
+
+移除验收：122 项后端测试、TypeScript 检查与 Next.js 生产构建通过。浏览器验证鼠标/键盘禁选、已选抖音后切换舆情时标红、无登录入口、执行拦截及切回事件溯源可选，其他平台登录/取消/导入/重试和移动端回归通过；另用真实后端能力接口验证页面，无模拟能力配置或新建 Agent 任务。真实抖音热榜返回 fresh、49 条。补充 `allowedDevOrigins: ["127.0.0.1"]`，修复本机地址的开发资源被 Next.js 拦截，localhost 与 127.0.0.1 浏览器测试均通过。
+
+## 贴吧在线舆情（2026-11-20）
+
+使用现有「综合 → 百度贴吧 → 热点事件 → 公众舆情分析 → 执行」，不新增输入框或另一套 Agent。先在登录提示区完成本人登录与验证；会话失效、官网要求验证或帖子不可读时明确停止，不填充模拟数据。
+
+- `tieba_protocol.py`：官方热点 URL/帖子 ID 白名单、动态账号验证页面和纯数据解析。只读服务器用户对象的顶层字面量，不执行抓取到的 JavaScript，也不将本地 Cookie 标记视为登录成功。
+- `session_worker.py` / `sessions.py`：沿用独立官方登录窗口、确认、无界面检查、私有 Cookie 保存及 5 分钟缓存。贴吧验证只请求固定官方入口及其真实热点 URL；不访问自定义域名。其他平台流程及抖音/知乎禁用保持不变。
+- `discovery.py::read_selected_topic`：PostDiscoveryAgent 可优先从所选热点官方聚合页发现真实 `/p/{id}` 链接，然后执行原有 `fetch_page → validate_posts → rank_posts`；关联页的链接不自动等于与事件相关。必要时仍可调用已有公开搜索。
+- `post_reader.py` / `post_read_worker.py`：按平台转发到授权贴吧读取；仅在准确线程 ID 与实际楼主正文都存在时判定已读，不以标题、摘要或 meta description 冒充正文。
+- `tieba_context.py`：在 MediaCrawler 独立 Python/Playwright 环境打开正常官方页面，复用其 HTML/API 内容提取器。只观察网页自身生成的响应，不调用上游 `crawler.start()`、反检测脚本、人工构造签名或验证码处理代码。最多读取 5 页、受每帖评论上限和既有超时约束。
+- `crawler_worker.py` / `collector.py`：评论经原有 Store callback 输出最小字段，保持原始顺序和评论 ID；不同 ID 的相同文本保留。原帖不计入评论，楼中楼不混入一级统计；未知时间保留缺省，不产生 1970 年占位时间。受限时停止后续采集，有已返回评论则保留部分结果。随后复用现有清洗、数据库、分批 LLM、PublicOpinionAgent、统计图表及报告 UI。
+
+不增加新依赖或模型/搜索密钥。继续使用 `MEDIACRAWLER_HOME`、`MEDIACRAWLER_PYTHON`、已确认用途的 `MEDIACRAWLER_AUTHORIZED`；`MEDIACRAWLER_COOKIES_TIEBA` 由登录 UI 自动保存在后端 `.env`，不要放入前端。自动化测试默认使用模型和网络测试替身；独立 MediaCrawler 已安装时另验证真实提取器的离线合约，不消费 API 额度。
+
+实际联网初验：用户本人登录后，服务器确认 verified；当前热榜首项的官方聚合页得到 10 个真实帖子链接，成功读取一帖 1,179 字正文及 8 条一级回复。此数量是初验截取上限，不代表整个平台讨论数量；排序未确认热门。完整在线 Agent 任务与报告验收另记录实际结果。
+
+完整真实验收任务：`6fcf4db5186b46249970af0a318c3183`。通过正式 FastAPI 创建任务，实际执行 PostDiscoveryAgent、在线采集、清洗、分批 LLM 和报告生成；3 帖各 15 条一级回复，共采集并分析 45 条。报告包含主题、代表性评论、总体评价及真实统计图表，状态为 partial：后续 Agent 请求的保守估算超过剩余预算准入，保留已完成研究，没有上调原预算或补造情绪/宏观模块。调用用量记录为 15 次模型调用、75,781 个 provider-reported Tokens。前端浏览器复用这份已保存报告验证图表与原文联动，未创建第二个付费任务。
+
+沿用现有每任务最多 3 次授权正文读取保护（公开 Fetch 失败后的兜底也有此保护）；其余候选因预算未读取时明确标记 `not_read_budget`，不将它们误报为已删除、无法访问或不相关。该保护与整个任务的模型调用/Token 预算是不同限制。
+
+最终检查：129 项后端测试、TypeScript 检查通过。浏览器验证真实后端在重启后自动核验已保存贴吧会话、执行按钮就绪以及抖音/知乎继续禁用；登录/取消/确认、平台联动和移动端回归通过。对上述真实报告完成了主题图表、评论证据的 20 次按需请求及桌面/移动端、键盘、Tooltip、重试、深浅主题验收，没有再次调用 Agent 或生成测试结果冒充真实报告。
+
+真实前端联调还修复了登录代理的来源判断：Next.js 的内部 URL 可能是 localhost，而浏览器实际访问 Host 为 127.0.0.1。`frontend/src/app/api/public-opinion/[...path]/route.ts` 现在以明确限制为本机地址的实际 Host 校验 Origin，仍拒绝跨站、来源不匹配和非本机请求，不信任 forwarded host。`frontend/tests/platform_session_proxy.py` 直接测试真实代理的两种本机地址和三类拒绝情况，使用已移除平台让后端返回 422，避免打开窗口或启动任务。最终生产构建也通过。

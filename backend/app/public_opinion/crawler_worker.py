@@ -57,7 +57,7 @@ async def run():
     code = os.environ["EVENTLENS_MC_CODE"]
     limit = int(os.environ["EVENTLENS_MC_LIMIT"])
     url, post_id = os.environ["EVENTLENS_MC_URL"], os.environ["EVENTLENS_MC_ID"]
-    factories = {"xhs": ("xhs", "XhsStoreFactory"), "dy": ("douyin", "DouyinStoreFactory"),
+    factories = {"xhs": ("xhs", "XhsStoreFactory"),
                  "ks": ("kuaishou", "KuaishouStoreFactory"), "bili": ("bilibili", "BiliStoreFactory"),
                  "wb": ("weibo", "WeibostoreFactory"), "tieba": ("tieba", "TieBaStoreFactory")}
     config.COOKIES = os.environ[f"MEDIACRAWLER_COOKIES_{code.upper()}"]
@@ -114,6 +114,18 @@ async def run():
     factory = getattr(importlib.import_module("store." + module), name)
     sink = Sink()
     factory.create_store = staticmethod(lambda: sink)
+    if code == 'tieba':
+        from tieba_context import collect_comments,TiebaReadError
+        status='completed'
+        try:
+            status=await collect_comments(config.COOKIES,url,limit,
+                importlib.import_module('store.tieba').batch_update_tieba_note_comments)
+        except EnoughComments:pass
+        except TiebaReadError as error:status=error.code
+        except Exception:status='failed'
+        metadata=destination.with_suffix('.status.json')
+        metadata.write_text(json.dumps({'status':status}));metadata.chmod(0o600)
+        return
     if code == "wb":
         try:
             await collect_weibo(config.COOKIES, post_id, limit,

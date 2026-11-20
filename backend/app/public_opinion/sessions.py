@@ -81,12 +81,10 @@ class PlatformSessions:
         runtime = ready or (bool(cookie) is False and 'Cookie' in reason)
         if not runtime and not active:
             state = 'unavailable'
-        remote_supported = platform not in {'douyin', 'tieba'}
+        remote_supported = True
         message = MESSAGES[state]
         if state == 'unavailable':
             message = reason
-        elif state in {'unverified', 'not_logged_in'} and not remote_supported:
-            message = '当前上游适配器仅提供 Cookie/本地标记检查，尚无法可靠确认服务器登录有效；请使用授权评论导入。'
         return {'platform_id': platform, 'status': state, 'message': message,
                 'configured': bool(cookie), 'session_verified': state == 'verified',
                 'collector_ready': ready and state == 'verified', 'runtime_ready': runtime,

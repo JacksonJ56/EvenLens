@@ -6,7 +6,7 @@ from pathlib import Path
 from ..event_trace.settings import bounded_int
 
 # EventLens IDs, not translated display names. Kuaishou is intentionally not added to the catalog.
-PLATFORMS = {"xiaohongshu": "xhs", "douyin": "dy", "kuaishou": "ks", "bilibili": "bili",
+PLATFORMS = {"xiaohongshu": "xhs", "kuaishou": "ks", "bilibili": "bili",
              "weibo": "wb", "tieba": "tieba"}
 
 

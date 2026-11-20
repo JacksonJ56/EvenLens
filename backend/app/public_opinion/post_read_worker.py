@@ -20,6 +20,10 @@ def minimize_note(note, expected_id):
 async def read():
     sys.path.insert(0, os.getcwd())
     logging.disable(logging.CRITICAL)
+    if os.environ.get('EVENTLENS_POST_PLATFORM')=='tieba':
+        from tieba_context import read_post,topic_posts
+        action=topic_posts if os.environ.get('EVENTLENS_POST_ACTION')=='topic' else read_post
+        return await action(os.environ['MEDIACRAWLER_COOKIES_TIEBA'],os.environ['EVENTLENS_POST_URL'])
     from xhs_context import xhs_client
     async with xhs_client(os.environ['MEDIACRAWLER_COOKIES_XHS'], os.environ['EVENTLENS_POST_URL']) as (client, info):
         note = await client.get_note_by_id(info.note_id, info.xsec_source, info.xsec_token)
@@ -32,7 +36,7 @@ if __name__ == '__main__':
     except Exception as error:
         # Never retry or switch identities after an access-control response.
         kind = type(error).__name__
-        body = {'status': 'restricted' if kind in {'IPBlockError', 'PlatformAccessError'} else
+        body = {'status': getattr(error,'code',None) if kind=='TiebaReadError' else 'restricted' if kind in {'IPBlockError', 'PlatformAccessError'} else
                 'not_found' if kind == 'NoteNotFoundError' else 'failed'}
     output = Path(os.environ['EVENTLENS_POST_OUTPUT'])
     output.write_text(json.dumps(body, ensure_ascii=False))

@@ -56,16 +56,17 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(state['collector_ready'])
         self.assertNotIn('cookie', state)
 
-    async def test_removed_zhihu_has_no_login_or_check_operation(self):
-        with self.assertRaises(HTTPException) as error:
-            self.manager.status('zhihu')
-        self.assertEqual(error.exception.status_code,422)
-        with patch('asyncio.create_subprocess_exec') as spawn:
-            for mode in ['login','check']:
-                with self.assertRaises(HTTPException) as error:
-                    await self.manager.start('zhihu',mode)
-                self.assertEqual(error.exception.status_code,422)
-            spawn.assert_not_called()
+    async def test_removed_platforms_have_no_login_or_check_operation(self):
+        for platform in ['zhihu','douyin']:
+            with self.assertRaises(HTTPException) as error:
+                self.manager.status(platform)
+            self.assertEqual(error.exception.status_code,422)
+            with patch('asyncio.create_subprocess_exec') as spawn:
+                for mode in ['login','check']:
+                    with self.assertRaises(HTTPException) as error:
+                        await self.manager.start(platform,mode)
+                    self.assertEqual(error.exception.status_code,422)
+                spawn.assert_not_called()
 
     def test_configured_cookie_is_not_verified(self):
         state = self.manager.status('weibo')
@@ -134,13 +135,12 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(HTTPException):
             await self.manager.require_verified('xiaohongshu')
 
-    async def test_weak_cookie_checks_are_not_exposed_as_verified_login(self):
-        for platform in ['douyin', 'tieba']:
-            state = self.manager.status(platform)
-            self.assertFalse(state['remote_verification_supported'])
-            self.assertFalse(state['login_available'])
-            with self.assertRaises(HTTPException):
-                await self.manager.start(platform, 'login')
+    async def test_tieba_login_enabled_but_needs_server_confirmation(self):
+        state=self.manager.status('tieba')
+        self.assertTrue(state['remote_verification_supported'])
+        self.assertTrue(state['login_available'])
+        self.assertFalse(state['session_verified'])
+        self.assertFalse(state['collector_ready'])
 
     async def test_dedup_confirm_and_cancel_release_worker(self):
         entered, exit_event = asyncio.Event(), asyncio.Event()
@@ -199,5 +199,3 @@ class WorkerVerificationTests(unittest.IsolatedAsyncioTestCase):
             response = SimpleNamespace(status=200, json=AsyncMock(return_value=body))
             context = SimpleNamespace(request=SimpleNamespace(get=AsyncMock(return_value=response)))
             self.assertEqual(await worker.verify('weibo', context, None), expected)
-        # Cookie-only upstream validation remains unverified even on an official page.
-        self.assertEqual(await worker.verify('douyin', None, SimpleNamespace(url='https://www.douyin.com/')), 'unverified')
