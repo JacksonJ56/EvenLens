@@ -126,6 +126,7 @@ async def cancel_task(task_id: str, request: Request):
 @router.post("/tasks/{task_id}/resume", status_code=202)
 async def resume_task(task_id: str, request: Request):
     task = find_task(request, task_id)
+    supported(task['payload']['selection']['platform_id'])
     if task["status"] not in {"failed", "cancelled", "interrupted"}:
         raise HTTPException(409, "仅失败、取消或中断的任务可以恢复")
     if not task["checkpoint"].get("collection_done") and not task["payload"].get("dataset_id"):

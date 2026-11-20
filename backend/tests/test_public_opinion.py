@@ -159,11 +159,10 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(comments[0].comment_id, "csv1")
         self.assertEqual(posts[0].url, URL)
 
-    def test_seven_platform_identifiers_and_cross_platform_rejected(self):
+    def test_supported_platform_identifiers_and_cross_platform_rejected(self):
         fixtures = {"weibo": URL, "xiaohongshu": "https://www.xiaohongshu.com/explore/1234567890abcdef12345678",
             "douyin": "https://www.douyin.com/video/123456", "kuaishou": "https://www.kuaishou.com/short-video/abc123",
-            "bilibili": "https://www.bilibili.com/video/BV1xx411c7mD", "tieba": "https://tieba.baidu.com/p/123456",
-            "zhihu": "https://www.zhihu.com/question/100/answer/200"}
+            "bilibili": "https://www.bilibili.com/video/BV1xx411c7mD", "tieba": "https://tieba.baidu.com/p/123456"}
         for platform, url in fixtures.items():
             self.assertIsNotNone(identify_post(platform, url))
         self.assertIsNone(identify_post("weibo", "https://weibo.com.evil.org/detail/123"))
@@ -231,6 +230,7 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(usage["discovery_searches"], 1)
         self.assertEqual(usage["discovery_fetches"], 1)
         self.assertIn("post_validation", stages)
+
 
     async def test_discovery_budget_and_timeout_errors_are_distinct(self):
         for failure, phrase in [(TimeoutError(), "秒时限"), (BudgetExceeded("test limit"), "预算不足")]:
@@ -489,3 +489,27 @@ class WorkflowTests(unittest.IsolatedAsyncioTestCase):
             request = request.model_copy(update={"event": request.event.model_copy(update={"id": "old-event"})})
             mismatch = await client.post("/api/public-opinion/tasks", json=request.model_dump(mode="json"))
             self.assertEqual(mismatch.status_code, 409)
+
+    async def test_removed_zhihu_opinion_cannot_create_import_or_resume(self):
+        app=FastAPI();app.include_router(api.router)
+        app.state.opinion_store=self.store;app.state.opinion_settings=self.settings
+        app.state.trace_settings=TraceSettings(llm_key='TEST',llm_model='TEST')
+        app.state.board_service=SimpleNamespace(boards={})
+        app.state.opinion_tasks=SimpleNamespace(start=AsyncMock())
+        payload=request_data('zhihu')
+        legacy,_=self.store.create_task(payload)
+        self.store.update_task(legacy['id'],status='failed',checkpoint={'collection_done':True,'dataset_id':self.dataset})
+        async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app),base_url='http://test') as client:
+            capability=await client.get('/api/public-opinion/capabilities')
+            self.assertNotIn('zhihu',capability.json()['platforms'])
+            self.assertTrue(capability.json()['platforms']['weibo']['supported'])
+            created=await client.post('/api/public-opinion/tasks',json=payload.model_dump(mode='json'))
+            imported=await client.post('/api/public-opinion/datasets/import',json={
+                'selection':payload.selection.model_dump(),'event':payload.event.model_dump(mode='json'),
+                'format':'json','content':'{}','authorized':True})
+            resumed=await client.post(f"/api/public-opinion/tasks/{legacy['id']}/resume")
+            for response in [created,imported,resumed]:
+                self.assertEqual(response.status_code,422,response.text)
+                self.assertIn('暂不支持',response.json()['detail'])
+        app.state.opinion_tasks.start.assert_not_called()
+        self.assertEqual(self.store.get_task(legacy['id'])['status'],'failed')

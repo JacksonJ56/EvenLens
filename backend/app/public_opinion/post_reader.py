@@ -16,7 +16,9 @@ from .collector import identify_post, normalized_time, worker_environment
 
 
 class PostReadError(ValueError):
-    pass
+    def __init__(self, message, code=None):
+        super().__init__(message)
+        self.code = code
 
 
 @dataclass(frozen=True)
@@ -60,7 +62,7 @@ class AuthenticatedPostReader:
                             'no_text': '帖子没有可读取的文字正文，不能仅用标题冒充正文',
                             'identity_mismatch': '返回帖子 ID 与候选链接不一致，未采用内容'}
                 if data.get('status') != 'ok':
-                    raise PostReadError(messages.get(data.get('status'), '本机平台读取失败，无法确认正文'))
+                    raise PostReadError(messages.get(data.get('status'), '本机平台读取失败，无法确认正文'), data.get('status'))
                 if data.get('post_id') != expected or not isinstance(data.get('content'), str) or not data['content'].strip():
                     raise PostReadError('本机平台返回的帖子身份或正文无效')
                 date = normalized_time(data.get('published_at'))

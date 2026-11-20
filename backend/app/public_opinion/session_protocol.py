@@ -9,7 +9,6 @@ PROFILES = {
     "kuaishou": {"name": "快手", "code": "ks", "home": "https://www.kuaishou.com/", "login": "https://www.kuaishou.com/", "domains": ["kuaishou.com"], "auth": ["passToken"]},
     "bilibili": {"name": "哔哩哔哩", "code": "bili", "home": "https://www.bilibili.com/", "login": "https://passport.bilibili.com/login", "domains": ["bilibili.com"], "auth": ["SESSDATA"]},
     "tieba": {"name": "百度贴吧", "code": "tieba", "home": "https://tieba.baidu.com/", "login": "https://tieba.baidu.com/", "domains": ["baidu.com"], "auth": ["BDUSS", "STOKEN", "PTOKEN"]},
-    "zhihu": {"name": "知乎", "code": "zhihu", "home": "https://www.zhihu.com/", "login": "https://www.zhihu.com/signin", "domains": ["zhihu.com"], "auth": ["z_c0"]},
 }
 
 

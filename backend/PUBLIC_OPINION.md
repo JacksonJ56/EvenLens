@@ -1,12 +1,20 @@
 # EventLens 公众舆情分析 · 实现与使用
 
+当前支持配置为微博、小红书、抖音、快手、哔哩哔哩、百度贴吧六个平台；各平台的实际采集条件仍以能力接口、运行环境与授权状态为准。知乎仅保留热榜与事件溯源，不支持公众舆情分析，在该功能的平台下拉栏中置灰。
+
+2026-11-20 移除范围：知乎舆情平台/搜索/帖子映射、评论采集、正文阅读、登录验证、专用浏览器快照及访问预检查代码，以及专用环境变量和已退役功能的测试。共用分析、其他平台登录、授权导入、小红书阅读和 DNS 故障切换保留。新建任务、导入及历史任务恢复均先做平台校验；知乎返回422，已有任务与报告不删除。独立 MediaCrawler 仓库不修改。
+
+前端复用后端 `/capabilities` 与现有 SpringDropdown 禁用逻辑，不维护第二套支持列表。选中知乎后从事件溯源切到公众舆情时，保留当前选择、标红提示并禁止执行；切回事件溯源即可继续选择知乎。鼠标和键盘均不能在舆情功能下选中知乎。
+
+移除验收：122项后端测试、TypeScript检查、Next.js生产构建通过；真实前端代理返回的能力列表不再含知乎，知乎登录接口返回422。浏览器回归验证灰色样式、鼠标/键盘禁用、功能切换、其他平台登录/取消/验证、授权导入、错误重试和移动端；未创建真实Agent任务。同步修正Motion内联透明度覆盖CSS禁用样式的问题。已清理该功能保存的知乎Cookie配置与专用快照，其他平台凭据和历史任务保留。
+
 这是现有实验室的第二个功能，不是聊天输入页。第一个「事件溯源」的 API、图和提示词没有被替换，第三个演示入口保留。
 
 ## 当前完成程度
 
 已经实现：复用级联选择、统一平台能力校验、JSON/CSV 授权评论导入、持久化后台任务、查询/取消/重试恢复、两个独立 Deep Agent、LangGraph 固定流程、按来源顺序截取评论、分批语义分析与缓存、程序统计、节日日历与外部语境研究、引用校验、动态报告和评论原文按需读取。
 
-在线路径已实现，但不能据此声称七个平台都已实采成功。MediaCrawler 未配置合法会话时，API 返回明确的 503；导入路径仍可使用。没有搜索或评论结果时不会填充演示资料。
+公众舆情分析现支持六个平台，不代表均已实采成功。知乎不再支持此功能，保留其热榜与事件溯源。MediaCrawler 未配置合法会话时，API 返回明确的 503；导入路径仍可使用。没有搜索或评论结果时不会填充演示资料。
 
 ## 启动
 
@@ -67,7 +75,7 @@ PUBLIC_OPINION_DATABASE_URL=postgresql+psycopg://eventlens:eventlens-local-devel
 
 | 方法/路径 | 输入/输出 |
 | --- | --- |
-| GET /capabilities | 七个平台的理论支持、adapter 实现状态、采集配置状态和原因 |
+| GET /capabilities | 六个平台的理论支持、adapter 实现状态、采集配置状态和原因 |
 | POST /datasets/import | `ImportRequest`：selection、event、format、content、authorized=true；返回 dataset_id、stats、binding |
 | POST /tasks | `OpinionRequest`：function_id=public_opinion、selection、event、可选 dataset_id、idempotency_key；返回任务，202 |
 | GET /tasks/{id} | 真实 status、stage、message、history 和模型用量 |
@@ -139,7 +147,6 @@ Worker 实际调用参数：`--platform <code> --lt cookie --type detail --speci
 | bilibili / bili | `/x/v2/reply/wbi/main`，DEFAULT=0 | 上游 field.py 注释为 popularity；运行时再检查枚举，记录 hot，不承诺等同网页排名 |
 | weibo / wb | `/comments/hotflow`，max_id/max_id_type | unknown；接口名不单独证明前端热门排序 |
 | tieba / tieba | 浏览器读取帖子页面和楼层分页 | unknown，保留提取顺序，不称热度榜 |
-| zhihu / zhihu | `/comment_v5/{type}/{id}/root_comment`，order=score，offset | 运行时确认签名默认值后记录 score，不等同热门榜 |
 
 在线 MVP 采集一级评论；**二级回复目前通过导入路径支持，在线补充采集未启用**。不同版本、平台接口、会话状态仍需实采验证；能力接口的 collector_ready 是配置就绪，不是实时成功保证。
 
@@ -371,7 +378,7 @@ npm run build
 
 - 微博：官方移动端 `/api/config` 的 login 布尔状态；已用本机已有授权会话实际验证通过。
 - 哔哩哔哩：官方 `/x/web-interface/nav` 的 isLogin 状态；调用逻辑已实现，尚无该平台账号完成本机真实登录验收。
-- 小红书：复用当前 MediaCrawler `create_xhs_client().query_self()` 与 selfinfo success；知乎复用 `get_current_user_info()`；快手复用当前 GraphQL pong。均已接入交互与验证逻辑，仍需用户本人登录后确认当前环境可用性。
+- 小红书：复用当前 MediaCrawler `create_xhs_client().query_self()` 与 selfinfo success；快手复用当前 GraphQL pong。均已接入交互与验证逻辑，仍需用户本人登录后确认当前环境可用性。
 - 抖音、贴吧：当前上游 pong 仅依赖 Cookie/localStorage 标记，无法可靠证明服务器会话仍有效。本版明确说明限制，不开放会制造“已验证”假象的在线登录入口，仍支持授权评论导入。后续须补充并实测可靠的远端验证器再开放；这不是声明平台本身无法登录。
 - 不为当前热榜目录中不存在的快手新增数据源。
 
@@ -427,3 +434,11 @@ GET report 不调用模型、不自动补写历史内容。旧报告的实际 in
 `research.py::OpinionResearch.investigate` 遇到此限制、且尚无有效基础主题时，使用相同的数据范围/有限评论读取/主题工具做精简分批分析，绕开累积的 Harness 历史与工具定义。它仍使用原预算和原有总评预留，不增加限额、不清零消费、不补造分析。如果紧凑批次也无法进入，则保留明确错误；有真实分析时生成 partial 报告，未完成的维度不伪称完成。数据集和已完成批次缓存可复用，恢复不重新搜索/采集。新增两个回归场景（大 Harness 不适配但小批次可成功、连小批次也不足时必须停止），共 117 项测试通过。
 
 实际失败任务在消费 67,489 Token 后从已保存的数据阶段恢复，未重新搜索/采集，44 条评论主题分析完成，生成 275 字总体评价并保存 partial 报告；最终累计 17 次模型调用、86,603 Token，未提高默认 120,000 限额。前端代理和浏览器真实报告验收通过（主题、时间、贡献、特征图、两行预览、分页、全文、失败重试、手机及主题适配），浏览器未新建 Agent 任务。页面原来仍停留在错误状态时，点原任务的“重试”会先查询状态，发现已完成后直接读取保存报告，不再研究。
+
+### Fake-IP 独立 DNS 服务故障切换（2026-11-20）
+
+小红书失败任务在帖子发现阶段被 URL 公网校验拦截，尚未进入评论采集。本机代理返回 `198.18.*` Fake-IP；原来固定 Cloudflare DNS 服务在当前网络连接失败，而 Google 与 AliDNS 的 A/AAAA 查询实测可用。`network.py::PublicDNSResolver` 改为按 Cloudflare、Google、AliDNS 的固定 HTTPS 地址依次核验，保留原来的显式 PUBLIC_OPINION_PUBLIC_DNS_FALLBACK 开关。每次查询 2.5 秒、全流程最多 8 秒、成功缓存 60 秒；仅网络/服务不可用时切换，任意已返回的私有/异常地址都立即拒绝，不通过其他服务覆盖。A 和 AAAA 都检查，不放行私网、不跳过安全校验，不将 Cookie 或 API Key 发送给 DNS 服务。
+
+修改：network.py、tests/test_opinion_budget_network.py、.env.example 和本文。120 项后端测试通过，涵盖备用服务接管、私有地址遇另一查询超时仍须拒绝、全部服务失败不放行、Fake-IP 开关及缓存。修复后的真实小红书域名公网核验通过；DNS 通过不等于该帖子正文、登录会话或评论采集已经验证成功。
+
+同一失败任务的原始链接进一步验证：公网校验通过；第三方 DeepSeek Fetch 仍返回 HTTP 404，随后现有本机授权阅读器取得身份匹配的 57 字符真实正文。此验证没有运行搜索、LLM、评论采集或完整 Agent 任务，不代表评论与最终报告已验收。后端已重启加载修复，用户可从原失败任务“重试”。

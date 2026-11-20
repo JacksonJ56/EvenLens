@@ -114,12 +114,13 @@ def create_opinion_graph(task_id, store, provider, trace_settings, settings, bud
             dataset = store.dataset(payload.dataset_id)
             return checkpoint(state, posts=dataset["posts"], dataset_id=payload.dataset_id, discovery_done=True,
                               collection_done=True, warnings=["本次使用用户声明已获授权的导入评论；未运行帖子搜索或在线采集。"])
+        reader = AuthenticatedPostReader(settings)
         progress("post_discovery", "正在发现相关帖子")
         def save_diagnostic(value):
             saved = store.get_task(task_id)["checkpoint"]
             store.update_task(task_id, checkpoint={**saved, "discovery_diagnostics": value})
         discovery = PostDiscovery(provider, model, settings, budget, progress, diagnostic=save_diagnostic,
-                                  reader=AuthenticatedPostReader(settings))
+                                  reader=reader)
         posts, warnings, usage = await discovery.discover(payload)
         return checkpoint(state, posts=[p.model_dump(mode="json") for p in posts], warnings=warnings,
                           usage=usage, discovery_done=True, discovery_diagnostics=discovery.diagnostics())

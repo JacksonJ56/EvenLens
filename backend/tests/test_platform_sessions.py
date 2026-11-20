@@ -56,6 +56,17 @@ class SessionTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(state['collector_ready'])
         self.assertNotIn('cookie', state)
 
+    async def test_removed_zhihu_has_no_login_or_check_operation(self):
+        with self.assertRaises(HTTPException) as error:
+            self.manager.status('zhihu')
+        self.assertEqual(error.exception.status_code,422)
+        with patch('asyncio.create_subprocess_exec') as spawn:
+            for mode in ['login','check']:
+                with self.assertRaises(HTTPException) as error:
+                    await self.manager.start('zhihu',mode)
+                self.assertEqual(error.exception.status_code,422)
+            spawn.assert_not_called()
+
     def test_configured_cookie_is_not_verified(self):
         state = self.manager.status('weibo')
         self.assertEqual(state['status'], 'unverified')

@@ -169,7 +169,7 @@ export function SpringDropdown({ label, placeholder, options, value, invalid, er
                 <motion.div key={option.id} className={styles.option} id={`${id}-option-${index}`} role="option"
                   aria-selected={option.id === value} aria-disabled={option.disabled || undefined} title={option.reason}
                   onPointerMove={() => { if (!option.disabled) setHighlighted(option.id); }} onClick={() => select(option)}
-                  initial={{ y: reducedMotion ? 0 : -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
+                  initial={{ y: reducedMotion ? 0 : -8, opacity: 0 }} animate={{ y: 0, opacity: option.disabled ? .38 : 1 }}
                   transition={reducedMotion ? instant : { ...springs.value, delay: Math.min(index, 6) * .035 }}>
                   {index === activeIndex && !option.disabled && (
                     <motion.span className={styles.highlight} layoutId={`${id}-highlight`} initial={false}

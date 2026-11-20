@@ -122,3 +122,51 @@ class PublicDNSResolverTests(unittest.IsolatedAsyncioTestCase):
         with self.assertRaises(UnsafeURL):
             await resolver("http://127.0.0.1/private")
         self.assertEqual(len(requests), count)
+
+    async def test_transport_failure_uses_fixed_backup_and_caches(self):
+        hosts = []
+        async def lookup(_): return ['198.18.0.15']
+        def handler(request):
+            hosts.append(request.url.host)
+            self.assertNotIn('authorization', request.headers)
+            self.assertEqual(request.url.params['name'], 'www.xiaohongshu.com')
+            if request.url.host == 'cloudflare-dns.com':
+                raise httpx.ConnectError('TEST unreachable', request=request)
+            return httpx.Response(200, json={'Status':0, 'Answer':
+                [{'type':1,'data':'36.51.224.126'}] if request.url.params['type']=='A' else []})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            resolver = PublicDNSResolver(client,enabled=True,lookup_fn=lookup)
+            await resolver('https://www.xiaohongshu.com/explore/test')
+            count = len(hosts)
+            await resolver('https://www.xiaohongshu.com/explore/another')
+        self.assertEqual(hosts.count('cloudflare-dns.com'),2)
+        self.assertEqual(hosts.count('dns.google'),2)
+        self.assertEqual(len(hosts),count)
+
+    async def test_private_answer_never_fails_over_even_if_other_query_fails(self):
+        hosts = []
+        async def lookup(_): return ['198.18.0.15']
+        def handler(request):
+            hosts.append(request.url.host)
+            if request.url.params['type']=='AAAA':
+                raise httpx.ReadTimeout('TEST timeout', request=request)
+            return httpx.Response(200,json={'Status':0,'Answer':[{'type':1,'data':'127.0.0.1'}]})
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            resolver=PublicDNSResolver(client,enabled=True,lookup_fn=lookup)
+            with self.assertRaisesRegex(UnsafeURL,'非公网'):
+                await resolver('https://www.xiaohongshu.com/explore/test')
+            self.assertFalse(resolver.cache)
+        self.assertEqual(set(hosts),{'cloudflare-dns.com'})
+
+    async def test_all_fixed_services_unavailable_does_not_allow_host(self):
+        hosts=[]
+        async def lookup(_): return ['198.18.0.15']
+        def handler(request):
+            hosts.append(request.url.host)
+            return httpx.Response(503)
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            resolver=PublicDNSResolver(client,enabled=True,lookup_fn=lookup)
+            with self.assertRaisesRegex(UnsafeURL,'服务不可用'):
+                await resolver('https://www.xiaohongshu.com/explore/test')
+            self.assertFalse(resolver.cache)
+        self.assertEqual(set(hosts),{'cloudflare-dns.com','dns.google','dns.alidns.com'})

@@ -59,8 +59,7 @@ async def run():
     url, post_id = os.environ["EVENTLENS_MC_URL"], os.environ["EVENTLENS_MC_ID"]
     factories = {"xhs": ("xhs", "XhsStoreFactory"), "dy": ("douyin", "DouyinStoreFactory"),
                  "ks": ("kuaishou", "KuaishouStoreFactory"), "bili": ("bilibili", "BiliStoreFactory"),
-                 "wb": ("weibo", "WeibostoreFactory"), "tieba": ("tieba", "TieBaStoreFactory"),
-                 "zhihu": ("zhihu", "ZhihuStoreFactory")}
+                 "wb": ("weibo", "WeibostoreFactory"), "tieba": ("tieba", "TieBaStoreFactory")}
     config.COOKIES = os.environ[f"MEDIACRAWLER_COOKIES_{code.upper()}"]
     config.HEADLESS = True
     config.ENABLE_CDP_MODE = False
@@ -104,11 +103,6 @@ async def run():
                 from media_platform.bilibili.field import CommentOrderType
                 if CommentOrderType.DEFAULT.value == 0:
                     mode = "hot"
-            if code == "zhihu":
-                from media_platform.zhihu.client import ZhiHuClient
-                import inspect
-                if inspect.signature(ZhiHuClient.get_root_comments).parameters["order_by"].default == "score":
-                    mode = "score"
             fields.update(_source_rank=self.rank, _sort_mode=mode)
             with destination.open("a") as file:
                 file.write(json.dumps(fields, ensure_ascii=False) + "\n")
@@ -139,7 +133,7 @@ async def run():
             pass
         return
     # Use real, verified CLI flags; keep credentials out of argv.
-    specified = url if code in {"xhs", "zhihu"} else post_id
+    specified = url if code == "xhs" else post_id
     sys.argv = ["main.py", "--platform", code, "--lt", "cookie", "--type", "detail",
                 "--specified_id", specified, "--get_comment", "yes", "--get_sub_comment", "no",
                 "--save_data_option", "jsonl"]

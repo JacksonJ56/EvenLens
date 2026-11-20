@@ -37,7 +37,6 @@ async def verify(platform, context, page):
         return "unverified"
     modules = {
         "xiaohongshu": ("xhs", "XiaoHongShuCrawler", "create_xhs_client"),
-        "zhihu": ("zhihu", "ZhihuCrawler", "create_zhihu_client"),
         "kuaishou": ("kuaishou", "KuaishouCrawler", "create_ks_client"),
     }
     module, cls, factory = modules[platform]
@@ -47,9 +46,6 @@ async def verify(platform, context, page):
     if platform == "xiaohongshu":
         body = await client.query_self()
         return "verified" if body and body.get("data", {}).get("result", {}).get("success") is True else "unverified"
-    if platform == "zhihu":
-        body = await client.get_current_user_info()
-        return "verified" if body.get("uid") and body.get("name") else "unverified"
     return "verified" if await client.pong() else "unverified"
 
 

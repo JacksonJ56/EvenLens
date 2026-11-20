@@ -12,7 +12,7 @@ from .schemas import DiscoveryChoice, Post
 
 DOMAINS = {"xiaohongshu": "xiaohongshu.com", "douyin": "douyin.com", "kuaishou": "kuaishou.com",
            "bilibili": "bilibili.com", "weibo": "weibo.com OR site:weibo.cn",
-           "tieba": "tieba.baidu.com", "zhihu": "zhihu.com"}
+           "tieba": "tieba.baidu.com"}
 
 
 class PostDiscovery:
@@ -26,6 +26,7 @@ class PostDiscovery:
         self.raw_results = 0
         self.reader = reader
         self.authorized_attempts = self.authorized_reads = self.public_fetch_failures = 0
+        self.authorized_restricted = False
 
     def diagnostics(self):
         return {"searches": self.search_count, "raw_results": self.raw_results, "candidate_posts": len(self.candidates),
@@ -33,6 +34,7 @@ class PostDiscovery:
                 "verified_posts": len(self.verified), "ranked_posts": len(self.ranked),
                 "public_fetch_failures": self.public_fetch_failures, "authorized_read_attempts": self.authorized_attempts,
                 "authorized_reads": self.authorized_reads,
+                "authorized_restricted": self.authorized_restricted,
                 "last_error": self.errors[-1] if self.errors else None}
 
     def record(self):
@@ -120,7 +122,7 @@ class PostDiscovery:
                 self.errors.append(message)
             if page is None:
                 self.public_fetch_failures += 1
-                if fallback_allowed and self.reader and self.reader.available(platform) and self.authorized_attempts < min(3, self.settings.max_fetches):
+                if fallback_allowed and not self.authorized_restricted and self.reader and self.reader.available(platform) and self.authorized_attempts < min(3, self.settings.max_fetches):
                     self.authorized_attempts += 1
                     self.progress("post_reading", "公开读取未成功，正在通过已授权的平台会话读取帖子")
                     self.record()
@@ -133,6 +135,12 @@ class PostDiscovery:
                     except Exception as error:
                         from .post_reader import PostReadError
                         self.errors.append(str(error) if isinstance(error, PostReadError) else "本机平台阅读未取得身份匹配的正文")
+                        if isinstance(error, PostReadError) and error.code in {'restricted', 'ForbiddenError', 'IPBlockError', 'PlatformAccessError'}:
+                            self.authorized_restricted = True
+                            self.record()
+                            raise ValueError("平台拒绝了当前授权会话的正文读取或要求安全验证；已停止任务。"
+                                "请在平台官方页面确认该帖子可访问并检查登录状态；不能将此判断为帖子已删除，"
+                                "也不会继续重试或绕过限制。可使用已获授权的评论文件继续分析。") from None
             if page is None:
                 self.pages[key] = {"error": "未取得可核验文字；不把搜索摘要或标题当正文"}
                 self.record()

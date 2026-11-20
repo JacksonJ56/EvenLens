@@ -23,7 +23,6 @@ POST_PATTERNS = {
     "bilibili": (r"(?:www\.)?bilibili\.com", r"/video/(BV[a-zA-Z0-9]{10}|av\d+)(?:/|$)"),
     "weibo": (r"(?:www\.|m\.)?weibo\.(?:com|cn)", r"/(?:detail|status)/([0-9]+)(?:/|$)"),
     "tieba": (r"tieba\.baidu\.com", r"/p/(\d+)(?:/|$)"),
-    "zhihu": (r"(?:www|zhuanlan)\.zhihu\.com", r"/(?:question/\d+/answer|p|zvideo)/(\d+)(?:/|$)"),
 }
 
 
