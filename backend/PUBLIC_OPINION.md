@@ -1,5 +1,9 @@
 # EventLens 公众舆情分析 · 实现与使用
 
+[返回项目首页](../README.md)
+
+> 本文包含功能说明与分阶段开发记录。历史安装、登录和验证记录不代表读者机器的当前状态；`/path/to/` 为需自行替换的路径示例。首次启动请先阅读项目首页。
+
 当前支持配置为微博、小红书、快手、哔哩哔哩、百度贴吧五个平台；各平台的实际采集条件仍以能力接口、运行环境与授权状态为准。抖音、知乎仅保留热榜与事件溯源，不支持公众舆情分析，在该功能的平台下拉栏中置灰。
 
 2026-11-20 移除范围：知乎舆情平台/搜索/帖子映射、评论采集、正文阅读、登录验证、专用浏览器快照及访问预检查代码，以及专用环境变量和已退役功能的测试。共用分析、其他平台登录、授权导入、小红书阅读和 DNS 故障切换保留。新建任务、导入及历史任务恢复均先做平台校验；知乎返回422，已有任务与报告不删除。独立 MediaCrawler 仓库不修改。
@@ -38,7 +42,7 @@ npm run dev
 
 ## 数据库
 
-持久化层使用 SQLAlchemy，支持 PostgreSQL + psycopg；本地未配置数据库时使用 `backend/app/data/public_opinion.sqlite3`，避免新增功能使原热榜启动依赖 PostgreSQL。该目录被 Git 忽略。
+持久化层使用 SQLAlchemy，支持 PostgreSQL + psycopg；本地未配置数据库时使用 `backend/data/public_opinion.sqlite3`，避免新增功能使原热榜启动依赖 PostgreSQL。该目录被 Git 忽略。
 
 PostgreSQL 开发服务已加入现有 Compose 的可选 `opinion` profile，不改变 RSSHub：
 
@@ -224,10 +228,10 @@ PostgreSQL 17 已在隔离临时 schema 中实际验证数据集、评论顺序�
 
 MediaCrawler 子进程只继承必要系统/网络环境及当前平台 Cookie，不继承 EventLens 模型密钥、搜索密钥、其他平台 Cookie 或数据库连接串。
 
-## 本机 MediaCrawler 安装记录（2026-11-19）
+## MediaCrawler 安装与路径示例（开发记录，2026-11-19）
 
 - 官方仓库： https://github.com/NanmiCoder/MediaCrawler
-- 安装位置：`/Users/jiangyiming/Downloads/Apps/work/MediaCrawler`，与 EventLens 并列，未复制到前端或后端依赖中。
+- 安装位置：`/path/to/MediaCrawler`，与 EventLens 并列，未复制到前端或后端依赖中。
 - 已验证提交：`09ed1ec62d885dab422a53de999f52ac0bd4966b`。上游源码与锁文件保持未修改。
 - 使用仓库固定的 Python 3.11，已创建独立 `.venv`（Python 3.11.18），依据 uv.lock 安装 89 个依赖。安装时使用临时 uv 工具；日常运行可以直接使用下面的 Python 路径。
 - Playwright 1.61.0，Chromium 149.0.7827.55，标准无头模式实际启动/关闭成功。
@@ -238,15 +242,15 @@ MediaCrawler 子进程只继承必要系统/网络环境及当前平台 Cookie�
 日常查看命令：
 
 ```sh
-cd /Users/jiangyiming/Downloads/Apps/work/MediaCrawler
+cd /path/to/MediaCrawler
 .venv/bin/python main.py --help
 ```
 
 配置文件中的实际路径：
 
 ```env
-MEDIACRAWLER_HOME=/Users/jiangyiming/Downloads/Apps/work/MediaCrawler
-MEDIACRAWLER_PYTHON=/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bin/python
+MEDIACRAWLER_HOME=/path/to/MediaCrawler
+MEDIACRAWLER_PYTHON=/path/to/MediaCrawler/.venv/bin/python
 ```
 
 ## 微博登录配置工具
@@ -256,8 +260,8 @@ MEDIACRAWLER_PYTHON=/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bi
 仅在已确认个人非商业学习研究用途及数据访问权限时使用：
 
 ```sh
-/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bin/python \
-  /Users/jiangyiming/Downloads/Apps/work/EventLens/backend/scripts/mediacrawler_login.py \
+/path/to/MediaCrawler/.venv/bin/python \
+  /path/to/EventLens/backend/scripts/mediacrawler_login.py \
   --platform weibo --confirm-authorized
 ```
 
@@ -322,7 +326,7 @@ npm run build
 独立浏览器验收脚本：`frontend/tests/opinion_visualizations_browser.py`。使用含 Playwright/Chromium 的独立 Python 环境，参数指定正在运行的前端地址和**已经保存的真实任务 ID**：
 
 ```sh
-/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bin/python \
+/path/to/MediaCrawler/.venv/bin/python \
   frontend/tests/opinion_visualizations_browser.py \
   --base http://127.0.0.1:3101 --task <已完成任务ID>
 ```

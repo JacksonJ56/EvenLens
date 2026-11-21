@@ -17,6 +17,8 @@ from .public_opinion.workflow import OpinionTasks
 from .public_opinion.network import PublicDNSResolver
 from .public_opinion.sessions import PlatformSessions
 from .public_opinion.session_api import router as session_router
+from .copilot.api import router as copilot_router, CopilotJobs
+from .copilot.store import CopilotStore
 
 
 @asynccontextmanager
@@ -38,12 +40,16 @@ async def lifespan(app: FastAPI):
         app.state.opinion_sessions = PlatformSessions(app.state.opinion_settings)
         app.state.opinion_store = OpinionStore(app.state.opinion_settings.database_url)
         opinion_resolver = PublicDNSResolver(trace_client, enabled=app.state.opinion_settings.public_dns_fallback)
+        app.state.copilot_clients = TraceClients(trace_client, trace_settings, resolve=opinion_resolver)
+        app.state.copilot_store = CopilotStore(app.state.opinion_store.engine)
+        app.state.copilot_jobs = CopilotJobs(app.state)
         app.state.opinion_tasks = OpinionTasks(app.state.opinion_store, TraceClients(trace_client, trace_settings, resolve=opinion_resolver),
                                              trace_settings, app.state.opinion_settings)
         worker = asyncio.create_task(service.run())
         try:
             yield
         finally:
+            await app.state.copilot_jobs.close()
             await app.state.opinion_sessions.close()
             await app.state.opinion_tasks.close()
             worker.cancel()
@@ -55,6 +61,7 @@ app = FastAPI(title="EventLens", lifespan=lifespan)
 app.include_router(trace_router)
 app.include_router(opinion_router)
 app.include_router(session_router)
+app.include_router(copilot_router)
 
 
 @app.get("/api/boards/{platform}/{board}")

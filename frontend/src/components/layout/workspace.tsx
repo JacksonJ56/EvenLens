@@ -5,15 +5,16 @@ import { MotionConfig, motion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ChatPanel } from "@/components/agent/chat-panel";
 import { Composer } from "@/components/agent/composer";
+import {CopilotResult} from '@/components/agent/copilot-result';
+import type {Artifact} from '@/types/agent';
 import { EventLabPanel } from "@/components/event-lab/event-lab-panel";
 import { Navigation } from "@/components/sidebar/navigation";
 import { PlatformPicker } from "@/components/trending/platform-picker";
 import { Ranking } from "@/components/trending/ranking";
-import { TrendPreview, type TrendPreviewSelection } from "@/components/trending/trend-preview";
 import { trendingMode } from "@/lib/api/trending";
 import { useAgent } from "@/hooks/use-agent";
 import { useBoard } from "@/hooks/use-board";
-import { categories } from "@/lib/catalog";
+import { categories,platforms } from "@/lib/catalog";
 import { resolveEventLabSource } from "@/lib/event-lab";
 import type { EventLabSelection } from "@/types/event-lab";
 import type { BoardQuery, CategoryId, CategoryPlatform, PlatformId, Trend } from "@/types/trending";
@@ -32,11 +33,9 @@ export function Workspace() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNav, setMobileNav] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [preview, setPreview] = useState<TrendPreviewSelection>();
-  const previewReturnFocus = useRef<HTMLButtonElement>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [chatOverlay, setChatOverlay] = useState(false);
-  const agent = useAgent(query);
+  const [copilotResult,setCopilotResult]=useState<Artifact>();
   const input = useRef<HTMLTextAreaElement>(null);
   const chatTrigger = useRef<HTMLButtonElement>(null);
   const chatClose = useRef<HTMLButtonElement>(null);
@@ -50,6 +49,13 @@ export function Workspace() {
   const labSource = labSelection ? resolveEventLabSource(labSelection) : undefined;
   const labQuery = trendingMode === "live" ? labSource?.query : undefined;
   const boardData = useBoard(labOpen ? labQuery : query);
+  const contextQuery=labOpen&&labSource?.query?labSource.query:query;
+  const contextCategory=labOpen&&labSource?.category?labSource.category:category;
+  const contextBoard=boardData.forQuery(contextQuery).state;
+  const agent=useAgent({category_id:contextCategory.id,platform_id:contextQuery.platform,feed_id:contextQuery.board,mode:trendingMode,selected_event_id:labOpen?labSelection?.trendId:undefined,
+    items:contextBoard.status==='ready'?contextBoard.result.items.slice(0,30).map(({id,title,rank})=>({id,title:title.slice(0,200),rank})):[]});
+  const contextPlatform=contextCategory.platforms.find(p=>p.id===contextQuery.platform);
+  const contextLabel=`${platforms[contextQuery.platform].name} · ${contextPlatform?.boards.find(b=>b.id===contextQuery.board)?.label??contextQuery.board}${trendingMode==='mock'?'（演示榜单）':''}`;
   const overlayOpen = chatOverlay && agent.open;
 
   useEffect(() => {
@@ -83,19 +89,19 @@ export function Workspace() {
   }, []);
 
   function selectPlatform(platform: PlatformId) {
+    setCopilotResult(undefined);
     const selected = category.platforms.find(({ id }) => id === platform);
     if (selected) {
-      setPreview(undefined);
       setQuery(defaultBoard(selected));
     }
   }
 
   function selectCategory(id: CategoryId) {
+    setCopilotResult(undefined);
     const next = categories.find((item) => item.id === id);
     if (!next) return;
     setLabOpen(false);
     if (id !== categoryId) {
-      setPreview(undefined);
       setCategoryId(id);
       setQuery(defaultBoard(next.platforms[0]));
       setExpanded(false);
@@ -104,7 +110,7 @@ export function Workspace() {
   }
 
   function toggleLab() {
-    setPreview(undefined);
+    setCopilotResult(undefined);
     if (!labOpen) setLabSelection((selection) => selection ?? { categoryId, platformId: query.platform, boardId: query.board });
     setLabOpen((open) => !open);
     if (mobileNav) closeNav();
@@ -140,17 +146,6 @@ export function Workspace() {
     input.current?.focus({ preventScroll: true });
   }
 
-  function closePreview() {
-    previewReturnFocus.current = preview?.trigger ?? null;
-    setPreview(undefined);
-  }
-
-  useLayoutEffect(() => {
-    if (preview) return;
-    previewReturnFocus.current?.focus({ preventScroll: true });
-    previewReturnFocus.current = null;
-  }, [preview]);
-
   return (
     <MotionConfig reducedMotion="user">
       <div className="workspace" data-nav-collapsed={collapsed} onKeyDown={(event) => {
@@ -181,7 +176,7 @@ export function Workspace() {
                 <button type="button" ref={chatTrigger} className="assistant-toggle" aria-expanded={agent.open} aria-controls="agent-panel" onClick={() => agent.open ? closeChat() : openChat()}><MessageSquare size={14} aria-hidden="true" />对话</button>
               </div>
             </header>
-            <main className="main-scroll" hidden={labOpen} data-preview-open={Boolean(preview)} inert={Boolean(preview)}>
+            <main className="main-scroll" hidden={labOpen||Boolean(copilotResult)}>
               <div className="main-inner">
                 <div key={category.id} className="page-intro">
                   <h1 ref={boardHeading} tabIndex={-1}>{category.id === "general" ? "全网热点" : `${category.name}热点`}</h1>
@@ -189,9 +184,10 @@ export function Workspace() {
                 <PlatformPicker ids={category.platforms.map(({ id }) => id)} current={query.platform} expanded={expanded}
                   onExpand={() => setExpanded((value) => !value)}
                   onSelect={(id) => { if (id !== query.platform) selectPlatform(id); }} />
-                <Ranking query={query} boards={activePlatform.boards} data={boardData.forQuery(query)} onBoard={(board) => { setPreview(undefined); setQuery({ ...query, board }); }} onAnalyze={analyze} onPreview={setPreview} previewId={preview?.trend.id} />
+                <Ranking query={query} boards={activePlatform.boards} data={boardData.forQuery(query)} onBoard={(board) => setQuery({ ...query, board })} onAnalyze={analyze} />
               </div>
             </main>
+            {copilotResult&&agent.threadId&&<main className="main-scroll"><div className="main-inner"><CopilotResult artifact={copilotResult} threadId={agent.threadId} onClose={()=>setCopilotResult(undefined)}/></div></main>}
             <main id="event-lab-panel" className="main-scroll" hidden={!labOpen}>
               <div className="main-inner">
                 {labSelection && labSource && (
@@ -200,13 +196,16 @@ export function Workspace() {
                 )}
               </div>
             </main>
-            {preview && <TrendPreview selection={preview} onClose={closePreview} />}
           </div>
           <button type="button" className="chat-scrim" tabIndex={-1} aria-label="关闭 AI 侧栏" aria-hidden={!agent.open} onClick={closeChat} />
-          <ChatPanel open={agent.open} messages={agent.messages} closeRef={chatClose} onClose={closeChat} />
+          <ChatPanel open={agent.open} messages={agent.messages} closeRef={chatClose} onClose={closeChat} busy={agent.busy}
+            contextLabel={contextLabel} initError={agent.initError} onReload={agent.reload} onRetry={()=>void agent.retry()}
+            onNew={()=>{setCopilotResult(undefined);agent.newConversation();}}
+            onClear={()=>void agent.clearHistory()} clearing={agent.clearing} clearError={agent.clearError}
+            onView={artifact=>{setLabOpen(false);setCopilotResult(artifact);}} />
           <div className="composer-position" ref={composer}>
-            <Composer draft={agent.draft} skill={agent.skill} topic={agent.topic} busy={agent.busy} inputRef={input}
-              onDraft={agent.setDraft} onSkill={agent.setSkill} onClearTopic={() => agent.setTopic(undefined)} onSend={() => { input.current?.focus({ preventScroll: true }); void agent.send(); }} />
+            <Composer draft={agent.draft} topic={agent.topic} busy={agent.busy} ready={agent.ready} inputRef={input}
+              onDraft={agent.setDraft} onClearTopic={() => agent.setTopic(undefined)} onStop={agent.stop} onSend={() => { input.current?.focus({ preventScroll: true }); void agent.send(); }} />
           </div>
         </motion.div>
       </div>

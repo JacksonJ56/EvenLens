@@ -1,5 +1,8 @@
 import asyncio
+import hashlib
+import json
 import logging
+import time
 
 from fastapi import APIRouter, HTTPException, Request, Response
 
@@ -11,6 +14,14 @@ from .settings import TraceSettings
 router = APIRouter()
 NO_CACHE = {"Cache-Control": "no-store"}
 logger = logging.getLogger("uvicorn.error")
+
+
+def trace_cache_key(payload) -> str:
+    """Share recent completed traces with Copilot without changing trace execution."""
+    data = payload.model_dump(mode="json") if hasattr(payload, "model_dump") else payload
+    identity = ["event_trace", data["selection"]["platform_id"], data["selection"]["feed_id"],
+                {k: data["event"].get(k) for k in ["id", "title", "url"]}, int(time.time() // 21600)]
+    return hashlib.sha256(json.dumps(identity, sort_keys=True).encode()).hexdigest()
 
 
 def canonical_event(payload: EventTraceRequest, service: BoardService) -> EventTraceRequest:
@@ -69,4 +80,7 @@ async def event_trace(payload: EventTraceRequest, request: Request, response: Re
             disconnected.cancel()
             await asyncio.gather(investigate, disconnected, return_exceptions=True)
     response.headers.update(NO_CACHE)
+    store = getattr(state, "opinion_store", None)
+    if store is not None:
+        store.cache_put(trace_cache_key(selected), output["response"].model_dump(mode="json"))
     return output["response"]

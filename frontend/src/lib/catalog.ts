@@ -1,5 +1,4 @@
 import type { Category, CategoryPlatform, Platform, PlatformId } from "@/types/trending";
-import type { Skill } from "@/types/agent";
 
 function search(base: string) {
   return (title: string) => base + encodeURIComponent(title);
@@ -86,13 +85,3 @@ export const categories: Category[] = [
     pick("infoq", ["7d", "7天"], ["1m", "1个月"], ["6m", "6个月"]),
   ] },
 ];
-
-export const skills: Skill[] = [
-  { id: "timeline", label: "事件脉络重建", shortLabel: "脉络重建", placeholder: "想梳理哪个事件的时间线？" },
-  { id: "context", label: "事件角色与背景分析", shortLabel: "角色与背景", placeholder: "想了解哪个事件的角色与背景？" },
-  { id: "perspectives", label: "争议与观点梳理", shortLabel: "争议与观点", placeholder: "想梳理哪个事件的争议与观点？" },
-];
-
-export function getSkill(id?: Skill["id"]) {
-  return skills.find((skill) => skill.id === id);
-}

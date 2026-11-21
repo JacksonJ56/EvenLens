@@ -122,7 +122,7 @@ npm run build
 真实保存报告的浏览器验收（不重跑 Agent）：
 
 ```sh
-/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bin/python \
+/path/to/MediaCrawler/.venv/bin/python \
   frontend/tests/opinion_visualizations_browser.py \
   --base http://127.0.0.1:3100 --task <真实已完成任务ID>
 ```
@@ -134,7 +134,7 @@ cd backend
 ./.venv/bin/python -m uvicorn tests.serve_opinion_fixture:app --host 127.0.0.1 --port 8002
 # GET http://127.0.0.1:8002/test-case 获取 task_id
 # 从项目根目录执行：
-/Users/jiangyiming/Downloads/Apps/work/MediaCrawler/.venv/bin/python \
+/path/to/MediaCrawler/.venv/bin/python \
   frontend/tests/opinion_visualizations_browser.py \
   --base http://127.0.0.1:3100 --api-base http://127.0.0.1:8002 --task <TEST任务ID>
 ```
