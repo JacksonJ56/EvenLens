@@ -110,6 +110,15 @@ flowchart TB
 
 ## 快速开始
 
+首次运行分两步：先启动页面与热榜，再填写自己的服务配置启用 AI。**仅复制示例文件不会自动获得模型密钥、平台登录会话或评论数据。**
+
+| 想运行的功能 | 完成哪些步骤 |
+| --- | --- |
+| 页面与真实热榜 | 下方第 1–4 步，并确保至少一个榜单来源可访问 |
+| 右侧 Copilot | 第 1–5 步；模型支持流式输出与工具调用 |
+| 事件溯源 | 第 1–5 步；搜索、网页读取及模型 API 可用 |
+| 公众舆情分析 | 以上配置，加独立 MediaCrawler 安装与本人平台登录；或导入已获授权的评论 |
+
 ### 1. 准备环境
 
 | 依赖 | 要求 | 用途 |
@@ -120,6 +129,15 @@ flowchart TB
 | MediaCrawler | 在线评论采集时需要 | 独立安装，按其要求配置 Python、Chromium、授权和平台会话 |
 
 以下命令按 macOS / Linux shell 编写。Windows 可在 WSL 中运行，或替换虚拟环境激活方式。
+
+先检查版本：
+
+```bash
+node --version
+python3 --version
+```
+
+`node` 必须至少为 `22.19.0`，`python3` 必须至少为 `3.11`。macOS 自带的 `python3` 可能仍为 3.9；若已安装较新 Python，请在下方创建虚拟环境时使用对应命令，例如 `python3.11 -m venv .venv`，不要继续使用旧解释器。
 
 ```bash
 git clone https://github.com/JacksonJ56/EvenLens.git EventLens
@@ -141,6 +159,8 @@ docker compose -f backend/compose.yaml up -d rsshub
 已有 RSSHub 实例时，直接修改 `backend/.env` 中的 `RSSHUB_BASE_URL`，无需再启动本机容器。部分榜单具有公开接口或网页备用源，具体见 [热榜配置说明](docs/trending.md)。
 
 ### 3. 启动后端
+
+在项目根目录另开终端执行。下面的 `python3` 须通过前面的版本检查：
 
 ```bash
 cd backend
@@ -164,6 +184,10 @@ npm run dev
 
 打开 **<http://127.0.0.1:3000>**。若端口被占用，以终端输出的 `Local` 地址为准。
 
+此时可以切换分区和平台查看热榜。未填写模型配置时，聊天或实验功能提示“尚未配置”属于预期状态；第三个实验功能目前仍为演示占位。
+
+如果后端 `8000` 端口被占用，可改成其他端口，例如 `8100`：同时将前端配置 `EVENTLENS_BACKEND_URL` 改为 `http://127.0.0.1:8100`，并重启前端。仅修改其中一处会导致页面无法连接后端。
+
 ### 5. 启用 AI 能力
 
 浏览热榜不需要模型密钥。启用事件研究与 Copilot 时，在 `backend/.env` 填写：
@@ -181,6 +205,34 @@ EVENT_TRACE_LLM_MODEL=your-model-id
 将占位值替换成实际配置。模型 ID 以账号当前可用列表为准，接口地址不要追加 `/chat/completions`；事件研究需要结构化输出，Copilot 还需要工具调用和流式能力。搜索 / Fetch 是否可用取决于相应 API 权限，不能仅凭拥有聊天密钥判断。
 
 配置后重启前后端。Copilot 默认复用这套模型设置；需要独立模型时可配置 `COPILOT_LLM_*`。
+
+验证顺序建议如下：
+
+1. 打开后端 `/docs`，确认 FastAPI 已启动。
+2. 打开前端，切换一个有数据的平台，确认显示来源和更新时间。
+3. 配置模型后，在聊天中发送一句简单问题，确认能收到回答。
+4. 再尝试事件溯源；公众舆情在线采集需先在实验室完成支持平台的登录与验证。
+
+### 6. 下次如何启动
+
+依赖安装和虚拟环境创建通常只在首次或依赖变更时执行。后续保持 RSSHub 可用，然后分别启动：
+
+```bash
+# 终端一：从 EventLens 根目录执行
+cd backend
+source .venv/bin/activate
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
+
+```bash
+# 终端二：从 EventLens 根目录执行
+cd frontend
+npm run dev
+```
+
+需要额外可信 CA 时，在自己的 `frontend/.env.local` 配置 `NODE_EXTRA_CA_CERTS`，启动器会在启动 Node 子进程前加载；正常证书环境可保持此项未设置。不要复制作者电脑上的绝对路径或 `.env`。停止服务可在对应终端按 `Ctrl+C`。
+
+已按空白配置完成一次隔离首次安装验证，包含新依赖安装、前后端启动、自动建库、真实热榜和浏览器操作。环境与验证边界见 [首次运行验证记录](docs/first-run.md)。
 
 ## 配置说明
 
