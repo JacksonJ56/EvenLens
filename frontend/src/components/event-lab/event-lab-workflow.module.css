@@ -56,8 +56,7 @@
   padding: 3px 0;
 }
 
-.feedback > svg { color: var(--color-rising); }
-.feedback[data-result="error"] > svg { color: var(--color-hot); }
+.feedback > svg { color: var(--color-hot); }
 .feedback > div { flex: 1 1 140px; min-width: 0; }
 .feedback strong { font-size: 13px; font-weight: 650; }
 .feedback p { margin: 2px 0 0; color: var(--color-muted); font-size: 12px; }

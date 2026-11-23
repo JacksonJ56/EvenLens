@@ -1,7 +1,6 @@
-import { Aperture, Blocks, Radar, type LucideIcon } from "lucide-react";
+import { Aperture, Radar, type LucideIcon } from "lucide-react";
 import type { EventLabEventContext } from "@/types/event-lab";
 import type { EventTraceResponse } from "@/types/event-trace";
-import { delay } from "./api/delay";
 import { requestEventTrace } from "./api/event-trace";
 import { requestPublicOpinion } from "./api/public-opinion";
 import type { OpinionProgress, OpinionReport } from "@/types/public-opinion";
@@ -13,7 +12,7 @@ export interface EventLabTaskRequest {
   resumeTaskId?: string;
 }
 
-export type EventLabTaskResult = { mode: "demo" } | { mode: "live"; trace: EventTraceResponse } | { mode: "opinion"; report: OpinionReport };
+export type EventLabTaskResult = { mode: "live"; trace: EventTraceResponse } | { mode: "opinion"; report: OpinionReport };
 
 export interface EventLabFeature {
   id: string;
@@ -22,11 +21,6 @@ export interface EventLabFeature {
   description?: string;
   mode: EventLabTaskResult["mode"];
   execute: (request: EventLabTaskRequest, signal: AbortSignal, onProgress?: (update: OpinionProgress) => void) => Promise<EventLabTaskResult>;
-}
-
-async function previewExecution(_request: EventLabTaskRequest, signal: AbortSignal): Promise<EventLabTaskResult> {
-  await delay(1700, signal);
-  return { mode: "demo" };
 }
 
 export const eventLabFeatures = [
@@ -40,5 +34,4 @@ export const eventLabFeatures = [
     async execute({ event, datasetId, resumeTaskId }, signal, onProgress) {
       return { mode: "opinion", report: await requestPublicOpinion(event, signal, onProgress, datasetId, resumeTaskId) };
     } },
-  { id: "experiment-3", name: "实验功能三", icon: Blocks, mode: "demo", execute: previewExecution },
 ] as const satisfies readonly [EventLabFeature, ...EventLabFeature[]];

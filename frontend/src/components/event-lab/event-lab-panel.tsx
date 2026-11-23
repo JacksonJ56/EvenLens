@@ -198,8 +198,8 @@ export function EventLabPanel({ active, selection, source, data, onChange, onRet
         </div>
       </form>
       <span className="sr-only" role="status">
-        {task?.status === "running" && (task.feature.mode === "demo" ? "演示任务处理中" : "AI 正在处理任务")}
-        {task?.status === "complete" && (task.result.mode === "demo" ? "演示流程已完成" : "分析已完成")}
+        {task?.status === "running" && "AI 正在处理任务"}
+        {task?.status === "complete" && "分析已完成"}
         {task?.status === "error" && "任务执行失败，可重试"}
       </span>
       {task && matchesTask && <EventLabTaskWindow task={task} onCancel={cancel} onRetry={() => {

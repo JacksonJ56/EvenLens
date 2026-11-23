@@ -1,4 +1,4 @@
-import { AlertCircle, Check, RotateCcw } from "lucide-react";
+import { AlertCircle, RotateCcw } from "lucide-react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { ThinkingOrb } from "thinking-orbs";
@@ -43,7 +43,7 @@ export function EventLabTaskWindow({ task, onRetry, onCancel }: { task: EventLab
       transition={{ duration: reducedMotion ? 0 : .28, ease: [.22, .7, .25, 1] }}>
       <div ref={body} className={styles.resultBody}>
         <header className={styles.resultHeader}>
-          <h2 id="event-lab-result-heading">{task.feature.mode === "demo" ? "任务演示" : "AI 结果"}</h2>
+          <h2 id="event-lab-result-heading">AI 结果</h2>
           <span>{task.feature.name}</span>
           <p>{task.request.event.title}</p>
         </header>
@@ -56,17 +56,11 @@ export function EventLabTaskWindow({ task, onRetry, onCancel }: { task: EventLab
               {task.status === "running" && (
                 <div className={styles.processing}>
                   <div data-theme="dark" aria-hidden="true"><ThinkingOrb state="solving" size={64} /></div>
-                  <strong>{task.progress?.message ?? (task.feature.mode === "demo" ? "演示任务处理中…" : "AI 正在处理任务…")}</strong>
+                  <strong>{task.progress?.message ?? "AI 正在处理任务…"}</strong>
                   {task.progress?.history && <ol aria-label="任务实际执行记录" style={{ fontSize: 12, color: "var(--color-muted)", textAlign: "left" }}>
                     {task.progress.history.map((event, index) => <li key={`${index}/${event.at}`}>{event.message}</li>)}
                   </ol>}
                   {task.feature.id === "public_opinion" && <button type="button" className="outline-button" onClick={onCancel}>取消任务</button>}
-                </div>
-              )}
-              {task.status === "complete" && task.result.mode === "demo" && (
-                <div className={styles.feedback} data-result="success">
-                  <Check aria-hidden="true" size={18} />
-                  <div><strong>演示流程已完成</strong><p>此功能尚未接入 AI 分析服务。</p></div>
                 </div>
               )}
               {task.status === "complete" && task.result.mode === "live" && (
