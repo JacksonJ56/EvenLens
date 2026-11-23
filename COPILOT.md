@@ -51,14 +51,16 @@ npm run dev -- --hostname 127.0.0.1 --port 3000
 
 ### 本机 HTTPS 证书问题
 
-此次本机 Node 直接连接模型遇到 `SELF_SIGNED_CERT_IN_CHAIN`，而既有 Python CA 文件验证成功。已通过以下方式启动前端，保留 TLS 校验：
+若 Node 连接模型遇到 `SELF_SIGNED_CERT_IN_CHAIN`，需要配置本机可信 CA。`npm run dev` 和 `npm start` 已通过启动器先读取 `frontend/.env.local` 的证书路径，再启动 Next.js，保留 TLS 校验：
 
 ```sh
-# 从 frontend/ 执行；只适用于本机已有的这个可信 CA 文件
-NODE_EXTRA_CA_CERTS="$PWD/../backend/.venv/lib/python3.13/site-packages/certifi/cacert.pem" npm run dev -- --hostname 127.0.0.1 --port 3000
+# frontend/.env.local；按实际可信证书文件填写，或使用相对于 frontend/ 的路径
+NODE_EXTRA_CA_CERTS=/absolute/path/to/trusted-ca.pem
 ```
 
-更换 Python 版本后可在 backend/ 用 `.venv/bin/python -c 'import certifi; print(certifi.where())'` 查询实际文件。其他机器应使用自己的可信 CA，不要复制 Cookie 或私钥，不要设置 `NODE_TLS_REJECT_UNAUTHORIZED=0`。`NODE_EXTRA_CA_CERTS` 必须在 Node 启动前设置，不能仅放入稍后才读取的 `.env.local`。
+保存后重启前端，正常运行 `npm run dev` 即可；启动日志会显示额外 CA 已加载。启动器在子进程启动前处理该设置，因此无需每次手写环境变量前缀。显式进程环境变量优先于文件；只有证书路径被注入，不会把文件中的其他密钥一并导出。`npm run build` 不需要改启动方式。
+
+本机已验证可用的是后端 Python CA 文件；可在 backend/ 用 `.venv/bin/python -c 'import certifi; print(certifi.where())'` 查询实际位置。更换 Python 环境后应更新路径。其他机器使用自己的可信 CA，不要设置 `NODE_TLS_REJECT_UNAUTHORIZED=0`。直接绕过 npm 脚本执行 `next dev` 时，仍需在 Node 启动前自行设置环境变量；只改 `backend/.env` 不会加载此证书配置。
 
 ## 真实源码调用链
 

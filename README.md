@@ -262,7 +262,7 @@ python -m unittest discover -s tests -v
 
 预算可以在 `backend/.env` 中配置。程序会精简历史工具正文、复用相同工具结果并为最终回答预留空间；字节预算和供应商实际 Token 用量分开记录。
 
-证书错误需要让 Node 使用本机可信 CA，并在启动前设置 `NODE_EXTRA_CA_CERTS`，不是只写入后端 `.env`。具体命令及诊断方式见 [Copilot 配置说明](COPILOT.md)。
+证书错误需要让 Node 使用本机可信 CA。在 `frontend/.env.local` 配置 `NODE_EXTRA_CA_CERTS` 的有效证书路径后重启前端；`npm run dev` / `npm start` 会在启动 Next.js 前加载该设置。具体配置及诊断方式见 [Copilot 配置说明](COPILOT.md)。
 
 </details>
 
