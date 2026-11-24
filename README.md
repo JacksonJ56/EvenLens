@@ -1,4 +1,8 @@
 <p align="center">
+  <a href="README.md"><strong>中文</strong></a> | <a href="README.en.md">English</a>
+</p>
+
+<p align="center">
   <img src="docs/assets/eventlens-banner.svg" alt="EventLens · 事件透镜：从热点到脉络，从讨论到理解" width="100%" />
 </p>
 
@@ -277,6 +281,8 @@ EventLens/
 │   ├── compose.yaml            # RSSHub 与可选 PostgreSQL
 │   └── tests/                  # 接口、工作流、数据及证据回归
 ├── docs/                       # 首页视觉资源及专题文档
+├── README.md                   # 中文项目说明
+├── README.en.md                # 英文项目说明
 └── COPILOT.md                  # 对话 Agent 的配置与逐函数调用链
 ```
 
